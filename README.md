@@ -235,3 +235,34 @@ This repository currently contains the initial project skeleton only. Modules in
 6. Train and evaluate baseline ML models.
 7. Build the Tkinter GUI and visualization outputs.
 
+
+## Step 2: Adaptive Preprocessing
+
+The purpose of this step is to prepare fruit images before future segmentation and feature extraction. It uses the Step 1 quality analysis result to choose a preprocessing method that has a clear purpose in the computer vision pipeline.
+
+Implemented algorithms:
+
+- Gaussian filter: smooths normal images and reduces small intensity variations.
+- Median filter: reduces impulse-style noise while preserving edges better than averaging.
+- Histogram equalization: improves dark or low-contrast grayscale images by spreading intensity values.
+
+Adaptive decision logic:
+
+- Dark image -> histogram equalization
+- Low contrast image -> histogram equalization
+- Noisy image -> median filter
+- Normal image -> gaussian filter
+
+Run adaptive preprocessing on one image:
+
+```bash
+python main.py --preprocess-image data/sample/test/freshapples/<image_name>
+```
+
+The command prints brightness, contrast, noise level, quality label, and the selected preprocessing method. It also saves a 1x3 visual output under `outputs/figures/` showing the original image, grayscale image, and preprocessed result.
+
+Later parameter sweep experiments will compare:
+
+- Gaussian sigma values
+- Median kernel sizes
+- Histogram equalization effects

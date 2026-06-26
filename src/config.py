@@ -37,6 +37,12 @@ DARK_BRIGHTNESS_THRESHOLD: float = 70.0
 LOW_CONTRAST_THRESHOLD: float = 20.0
 HIGH_NOISE_THRESHOLD: float = 15.0
 
+# Initial preprocessing values.
+# These will be explored later in parameter sweep experiments.
+DEFAULT_GAUSSIAN_KERNEL_SIZE: int = 5
+DEFAULT_GAUSSIAN_SIGMA: float = 1.0
+DEFAULT_MEDIAN_KERNEL_SIZE: int = 3
+
 # Initial empirical image quality thresholds.
 # These values will be adjusted later after parameter sweep experiments.
 LOW_DEFECT_RATIO_THRESHOLD: float = 0.10

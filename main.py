@@ -6,10 +6,11 @@ import argparse
 from pathlib import Path
 
 from src.config import FIGURES_DIR
+from src.adaptive_pipeline import run_preprocessing_pipeline
 from src.dataset_sampling import check_datasets, create_sample_dataset
 from src.io_utils import load_image
 from src.quality_analysis import analyze_image_quality, rgb_to_grayscale
-from src.visualization import save_quality_analysis_figure
+from src.visualization import save_preprocessing_figure, save_quality_analysis_figure
 
 STARTUP_MESSAGE = "Fruit Quality Inspection project skeleton is ready."
 
@@ -31,6 +32,11 @@ def parse_args() -> argparse.Namespace:
         "--analyze-image",
         type=Path,
         help="Analyze brightness, contrast, and noise for one image.",
+    )
+    parser.add_argument(
+        "--preprocess-image",
+        type=Path,
+        help="Run adaptive preprocessing for one image and save a figure.",
     )
     return parser.parse_args()
 
@@ -57,6 +63,31 @@ def run_image_quality_analysis(image_path: Path) -> None:
     print(f"- Quality label: {results['quality_label']}")
     print(f"Saved figure: {figure_path}")
 
+def run_image_preprocessing(image_path: Path) -> None:
+    """Run Step 2 adaptive preprocessing for one image."""
+    image = load_image(image_path)
+    results = run_preprocessing_pipeline(image)
+    quality = results["quality"]
+
+    figure_name = f"preprocessing_{image_path.stem}.png"
+    figure_path = FIGURES_DIR / figure_name
+    save_preprocessing_figure(
+        original=results["original_image"],
+        grayscale=results["grayscale"],
+        preprocessed=results["preprocessed_gray"],
+        output_path=figure_path,
+        method_name=str(results["preprocessing_method"]),
+        title=image_path.name,
+    )
+
+    print("Preprocessing analysis:")
+    print(f"- Brightness: {quality['brightness']:.2f}")
+    print(f"- Contrast: {quality['contrast']:.2f}")
+    print(f"- Noise level: {quality['noise_level']:.2f}")
+    print(f"- Quality label: {quality['quality_label']}")
+    print(f"- Selected method: {results['preprocessing_method']}")
+    print(f"Saved figure: {figure_path}")
+
 
 def main() -> None:
     """Run the requested project utility command or print the startup message."""
@@ -72,6 +103,10 @@ def main() -> None:
 
     if args.analyze_image is not None:
         run_image_quality_analysis(args.analyze_image)
+        return
+
+    if args.preprocess_image is not None:
+        run_image_preprocessing(args.preprocess_image)
         return
 
     print(STARTUP_MESSAGE)
