@@ -1,4 +1,4 @@
-﻿# Fruit Quality Inspection and Export Suitability Assessment
+# Fruit Quality Inspection and Export Suitability Assessment
 
 A university Image Processing and Computer Vision project for analyzing fruit images using traditional image processing and machine learning.
 
@@ -27,20 +27,20 @@ The original dataset should remain unchanged under `data/raw/`:
 
 ```text
 data/raw/
-├── train/
-│   ├── freshapples/
-│   ├── freshbanana/
-│   ├── freshoranges/
-│   ├── rottenapples/
-│   ├── rottenbanana/
-│   └── rottenoranges/
-└── test/
-    ├── freshapples/
-    ├── freshbanana/
-    ├── freshoranges/
-    ├── rottenapples/
-    ├── rottenbanana/
-    └── rottenoranges/
++-- train/
+�   +-- freshapples/
+�   +-- freshbanana/
+�   +-- freshoranges/
+�   +-- rottenapples/
+�   +-- rottenbanana/
+�   +-- rottenoranges/
++-- test/
+    +-- freshapples/
+    +-- freshbanana/
+    +-- freshoranges/
+    +-- rottenapples/
+    +-- rottenbanana/
+    +-- rottenoranges/
 ```
 
 A later sampling script will create a smaller balanced dataset under `data/sample/` using random seed `42`:
@@ -50,20 +50,20 @@ A later sampling script will create a smaller balanced dataset under `data/sampl
 
 ```text
 data/sample/
-├── train/
-│   ├── freshapples/
-│   ├── freshbanana/
-│   ├── freshoranges/
-│   ├── rottenapples/
-│   ├── rottenbanana/
-│   └── rottenoranges/
-└── test/
-    ├── freshapples/
-    ├── freshbanana/
-    ├── freshoranges/
-    ├── rottenapples/
-    ├── rottenbanana/
-    └── rottenoranges/
++-- train/
+�   +-- freshapples/
+�   +-- freshbanana/
+�   +-- freshoranges/
+�   +-- rottenapples/
+�   +-- rottenbanana/
+�   +-- rottenoranges/
++-- test/
+    +-- freshapples/
+    +-- freshbanana/
+    +-- freshoranges/
+    +-- rottenapples/
+    +-- rottenbanana/
+    +-- rottenoranges/
 ```
 
 ## Technical Constraints
@@ -85,9 +85,9 @@ data/sample/
    - Contrast estimation
    - Noise estimation
 3. Adaptive preprocessing
-   - Dark image → histogram equalization
-   - Noisy image → median filter
-   - Normal image → gaussian filter
+   - Dark image ? histogram equalization
+   - Noisy image ? median filter
+   - Normal image ? gaussian filter
 4. Segmentation
    - RGB to grayscale
    - Otsu threshold
@@ -132,11 +132,11 @@ data/sample/
 
 Initial planned rules:
 
-- Rotten → Not Suitable
-- Fresh + low defect ratio → Suitable
-- Too dark or high noise → Need Recheck
-- High defect ratio → Not Suitable
-- Abnormal circularity or shape → Not Suitable or Need Recheck
+- Rotten ? Not Suitable
+- Fresh + low defect ratio ? Suitable
+- Too dark or high noise ? Need Recheck
+- High defect ratio ? Not Suitable
+- Abnormal circularity or shape ? Not Suitable or Need Recheck
 
 The final decision should include a short human-readable explanation for the GUI.
 
@@ -158,13 +158,48 @@ source .venv/bin/activate
 
 ## Running the Project
 
-For now, run the placeholder entry point:
+Run the placeholder entry point:
 
 ```bash
 python main.py
 ```
 
-Future commands will include dataset sampling, model training, prediction, and GUI launch.
+## Dataset Preparation
+
+Place the original Kaggle dataset under `data/raw/` with `train/` and `test/` splits. Keep the class folder names unchanged:
+
+- `freshapples`
+- `freshbanana`
+- `freshoranges`
+- `rottenapples`
+- `rottenbanana`
+- `rottenoranges`
+
+The raw dataset is ignored by Git and should not be committed. Create a smaller balanced dataset under `data/sample/` with:
+
+- Train: 150 images per class
+- Test: 50 images per class
+- Random seed: 42
+
+Check the current raw and sampled dataset counts:
+
+```bash
+python main.py --check-data
+```
+
+Create the sampled dataset:
+
+```bash
+python main.py --sample-data
+```
+
+Check counts again after sampling:
+
+```bash
+python main.py --check-data
+```
+
+Future commands will include model training, prediction, and GUI launch.
 
 ## Current Project Status
 
@@ -179,3 +214,4 @@ This repository currently contains the initial project skeleton only. Modules in
 5. Add feature extraction and export suitability rules.
 6. Train and evaluate baseline ML models.
 7. Build the Tkinter GUI and visualization outputs.
+
