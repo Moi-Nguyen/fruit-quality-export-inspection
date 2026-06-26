@@ -1,0 +1,44 @@
+﻿__pycache__/
+*.py[cod]
+*$py.class
+
+.venv/
+venv/
+env/
+ENV/
+
+.ipynb_checkpoints/
+
+# Dataset files are large and should not be committed.
+data/raw/*
+!data/raw/.gitkeep
+data/sample/*
+!data/sample/.gitkeep
+!data/sample/train/
+!data/sample/test/
+data/sample/train/*
+data/sample/test/*
+!data/sample/train/.gitkeep
+!data/sample/test/.gitkeep
+
+# Trained model files.
+*.pkl
+*.joblib
+models/*.pkl
+models/*.joblib
+
+# Generated outputs and logs.
+outputs/*
+!outputs/.gitkeep
+!outputs/masks/
+!outputs/defect_maps/
+!outputs/figures/
+outputs/masks/*
+outputs/defect_maps/*
+outputs/figures/*
+!outputs/masks/.gitkeep
+!outputs/defect_maps/.gitkeep
+!outputs/figures/.gitkeep
+*.log
+logs/
+.pytest_cache/
