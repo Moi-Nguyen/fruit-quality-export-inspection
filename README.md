@@ -28,12 +28,12 @@ The original dataset should remain unchanged under `data/raw/`:
 ```text
 data/raw/
 +-- train/
-¦   +-- freshapples/
-¦   +-- freshbanana/
-¦   +-- freshoranges/
-¦   +-- rottenapples/
-¦   +-- rottenbanana/
-¦   +-- rottenoranges/
+ï¿½   +-- freshapples/
+ï¿½   +-- freshbanana/
+ï¿½   +-- freshoranges/
+ï¿½   +-- rottenapples/
+ï¿½   +-- rottenbanana/
+ï¿½   +-- rottenoranges/
 +-- test/
     +-- freshapples/
     +-- freshbanana/
@@ -51,12 +51,12 @@ A later sampling script will create a smaller balanced dataset under `data/sampl
 ```text
 data/sample/
 +-- train/
-¦   +-- freshapples/
-¦   +-- freshbanana/
-¦   +-- freshoranges/
-¦   +-- rottenapples/
-¦   +-- rottenbanana/
-¦   +-- rottenoranges/
+ï¿½   +-- freshapples/
+ï¿½   +-- freshbanana/
+ï¿½   +-- freshoranges/
+ï¿½   +-- rottenapples/
+ï¿½   +-- rottenbanana/
+ï¿½   +-- rottenoranges/
 +-- test/
     +-- freshapples/
     +-- freshbanana/
@@ -164,6 +164,26 @@ Run the placeholder entry point:
 python main.py
 ```
 
+
+## Step 1: Image Loading and Quality Analysis
+
+Purpose: this first algorithmic step loads one fruit image, converts it from RGB to grayscale using the manual weighted formula, and measures basic image quality using brightness, contrast, and an estimated noise level.
+
+Run the analysis on one sampled image:
+
+```bash
+python main.py --analyze-image data/sample/test/freshapples/<image_name>
+```
+
+The command prints the image quality metrics and saves a side-by-side original/grayscale figure under `outputs/figures/`.
+
+This step supports later adaptive preprocessing decisions:
+
+- Dark image -> histogram equalization
+- Noisy image -> median filter
+- Normal image -> gaussian filter
+
+The thresholds are initial empirical values and will be adjusted later using parameter sweep experiments.
 ## Dataset Preparation
 
 Place the original Kaggle dataset under `data/raw/` with `train/` and `test/` splits. Keep the class folder names unchanged:

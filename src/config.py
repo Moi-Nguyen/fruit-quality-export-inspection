@@ -34,7 +34,11 @@ FRUIT_TYPES: list[str] = ["apple", "banana", "orange"]
 QUALITY_LABELS: list[str] = ["fresh", "rotten"]
 
 DARK_BRIGHTNESS_THRESHOLD: float = 70.0
-HIGH_NOISE_THRESHOLD: float = 25.0
+LOW_CONTRAST_THRESHOLD: float = 20.0
+HIGH_NOISE_THRESHOLD: float = 15.0
+
+# Initial empirical image quality thresholds.
+# These values will be adjusted later after parameter sweep experiments.
 LOW_DEFECT_RATIO_THRESHOLD: float = 0.10
 HIGH_DEFECT_RATIO_THRESHOLD: float = 0.30
 MIN_CIRCULARITY_THRESHOLD: float = 0.40
