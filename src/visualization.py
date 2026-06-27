@@ -106,3 +106,92 @@ def save_defect_map_figure(defect_map: np.ndarray, output_path: Path) -> None:
     """Save a defect map visualization."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.imsave(output_path, defect_map, cmap="hot")
+
+def save_feature_extraction_figure(
+    original: np.ndarray,
+    fruit_mask: np.ndarray,
+    defect_map: np.ndarray,
+    output_path: Path,
+    title: str | None = None,
+) -> None:
+    """Save original image, fruit mask, and defect map side by side."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    figure, axes = plt.subplots(1, 3, figsize=(12, 4))
+    if title is not None:
+        figure.suptitle(title)
+
+    axes[0].imshow(ensure_uint8_image(original), cmap="gray" if original.ndim == 2 else None)
+    axes[0].set_title("Original")
+    axes[0].axis("off")
+
+    axes[1].imshow(fruit_mask, cmap="gray", vmin=0, vmax=1)
+    axes[1].set_title("Fruit mask")
+    axes[1].axis("off")
+
+    axes[2].imshow(defect_map, cmap="gray", vmin=0, vmax=1)
+    axes[2].set_title("Defect map")
+    axes[2].axis("off")
+
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=150)
+    plt.close(figure)
+
+
+def save_segmentation_figure(
+    original: np.ndarray,
+    grayscale: np.ndarray,
+    preprocessed: np.ndarray,
+    initial_mask: np.ndarray,
+    cleaned_mask: np.ndarray,
+    fruit_mask: np.ndarray,
+    output_path: Path,
+    combined_mask: np.ndarray | None = None,
+    title: str | None = None,
+) -> None:
+    """Save the main segmentation stages in one figure."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if combined_mask is None:
+        images = [original, grayscale, preprocessed, initial_mask, cleaned_mask, fruit_mask]
+        titles = [
+            "Original",
+            "Grayscale",
+            "Preprocessed",
+            "Initial Otsu Mask",
+            "Cleaned Mask",
+            "Fruit Mask",
+        ]
+    else:
+        images = [original, grayscale, preprocessed, initial_mask, combined_mask, cleaned_mask, fruit_mask]
+        titles = [
+            "Original",
+            "Grayscale",
+            "Preprocessed",
+            "Initial Otsu Mask",
+            "Combined Candidate Mask",
+            "Cleaned Mask",
+            "Fruit Mask",
+        ]
+
+    figure, axes = plt.subplots(2, 4, figsize=(16, 8))
+    flat_axes = axes.ravel()
+    if title is not None:
+        figure.suptitle(title)
+
+    for axis, image, image_title in zip(flat_axes, images, titles):
+        if image is original:
+            axis.imshow(ensure_uint8_image(image), cmap="gray" if image.ndim == 2 else None)
+        elif "Mask" in image_title:
+            axis.imshow(image, cmap="gray", vmin=0, vmax=1)
+        else:
+            axis.imshow(image, cmap="gray", vmin=0, vmax=255)
+        axis.set_title(image_title)
+        axis.axis("off")
+
+    for axis in flat_axes[len(images) :]:
+        axis.axis("off")
+
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=150)
+    plt.close(figure)

@@ -184,6 +184,29 @@ This step supports later adaptive preprocessing decisions:
 - Normal image -> gaussian filter
 
 The thresholds are initial empirical values and will be adjusted later using parameter sweep experiments.
+
+## Step 4: Feature Extraction
+
+Purpose: feature extraction converts each segmented fruit image into a clear numeric feature vector that can be explained in the project defense and later used for machine learning.
+
+The current handcrafted feature groups are:
+
+- Shape features: fruit area, perimeter, circularity, bounding box, aspect ratio, centroid, and mask area ratio.
+- Color features: RGB mean, RGB standard deviation, and normalized RGB histograms inside the fruit mask.
+- Texture/quality features: grayscale statistics, gradient statistics, brightness, contrast, and noise level.
+- Defect-related features: a simple heuristic defect map, defect area, and defect ratio inside the fruit region.
+
+Note: the defect map is a heuristic feature based on brightness/color rules inside the fruit mask; it supports machine learning, but is not perfect defect segmentation.
+
+Run feature extraction on one sampled image:
+
+```bash
+python main.py --extract-features data/sample/test/freshapples/<image_name>
+```
+
+The command prints important features and saves a visualization under `outputs/figures/` showing the original image, fruit mask, and defect map.
+
+These handcrafted features will later be exported to CSV and used to train Random Forest, KNN, and SVM models.
 ## Dataset Preparation
 
 Place the original Kaggle dataset under `data/raw/` with `train/` and `test/` splits. Keep the class folder names unchanged:
@@ -266,3 +289,51 @@ Later parameter sweep experiments will compare:
 - Gaussian sigma values
 - Median kernel sizes
 - Histogram equalization effects
+
+## Step 3: Fruit Segmentation
+
+Purpose: this step separates the main fruit region from the background so later stages can measure fruit shape, color, and defects only inside the fruit area. It makes segmentation a clear major technique in the computer vision pipeline and saves intermediate visual outputs for explanation during a defense.
+
+Implemented algorithms:
+
+- Manual Otsu thresholding with NumPy.
+- Binary mask creation with optional inversion for bright backgrounds.
+- Manual morphology: erosion, dilation, opening, and closing.
+- Manual connected component labeling using BFS.
+- Simple non-white background mask for fruit pixels near white backgrounds.
+- Simple color difference mask for yellow and orange fruit pixels.
+- Black border removal for rotated dataset images.
+- Largest non-border component selection to keep the main fruit object.
+
+Segmentation improvement for rotated dataset images:
+
+- Black triangular border artifacts are removed from the candidate mask.
+- Non-white background masking helps separate fruit from white backgrounds.
+- Color difference masking helps banana and orange images where grayscale Otsu alone is weak.
+- Largest non-border component selection avoids border artifacts and background regions touching the image edge.
+
+Segmentation pipeline:
+
+```text
+original image
+-> grayscale
+-> adaptive preprocessing
+-> Otsu threshold
+-> combine Otsu, non-white, and color-difference masks
+-> morphology cleanup
+-> largest non-border fruit component
+```
+
+Run segmentation on one sampled image:
+
+```bash
+python main.py --segment-image data/sample/test/freshapples/<image_name>
+```
+
+The command prints brightness, contrast, noise level, quality label, selected preprocessing method, Otsu threshold, combined mask area, and final fruit mask area. It also saves a visualization under `outputs/figures/` showing the original image, grayscale image, preprocessed image, initial Otsu mask, combined candidate mask, cleaned morphology mask, and final fruit mask.
+
+Later parameter sweep experiments will compare:
+
+- Morphology kernel size: 3, 5, 7
+- Connected component connectivity: 4 vs 8
+- Otsu segmentation before and after preprocessing
