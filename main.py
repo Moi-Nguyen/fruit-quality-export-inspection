@@ -11,6 +11,7 @@ from src.adaptive_pipeline import run_preprocessing_pipeline, run_segmentation_p
 from src.config import FIGURES_DIR
 from src.dataset_sampling import check_datasets, create_sample_dataset
 from src.features import create_defect_map, extract_all_features_from_pipeline_result
+from src.features_dataset import export_sample_features
 from src.io_utils import load_image
 from src.quality_analysis import analyze_image_quality, rgb_to_grayscale
 from src.visualization import (
@@ -56,7 +57,19 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Extract handcrafted features for one image and save a figure.",
     )
+    parser.add_argument(
+        "--export-features",
+        action="store_true",
+        help="Extract features for data/sample/ and save CSV files.",
+    )
     return parser.parse_args()
+
+
+def count_csv_rows(csv_path: Path) -> int:
+    """Count data rows in a CSV file, excluding the header."""
+    with csv_path.open("r", encoding="utf-8", newline="") as csv_file:
+        line_count = sum(1 for _ in csv_file)
+    return max(line_count - 1, 0)
 
 
 def run_image_quality_analysis(image_path: Path) -> None:
@@ -180,6 +193,20 @@ def run_feature_extraction(image_path: Path) -> None:
     print(f"Saved figure: {figure_path}")
 
 
+def run_feature_csv_export() -> None:
+    """Run Step 5 batch feature extraction and CSV export."""
+    train_csv_path, test_csv_path = export_sample_features(
+        sample_root=Path("data/sample"),
+        output_dir=Path("outputs/features"),
+    )
+
+    print("Feature CSV export complete:")
+    print(f"- Train CSV: {train_csv_path}")
+    print(f"- Train rows: {count_csv_rows(train_csv_path)}")
+    print(f"- Test CSV: {test_csv_path}")
+    print(f"- Test rows: {count_csv_rows(test_csv_path)}")
+
+
 def main() -> None:
     """Run the requested project utility command or print the startup message."""
     args = parse_args()
@@ -206,6 +233,10 @@ def main() -> None:
 
     if args.extract_features is not None:
         run_feature_extraction(args.extract_features)
+        return
+
+    if args.export_features:
+        run_feature_csv_export()
         return
 
     print(STARTUP_MESSAGE)

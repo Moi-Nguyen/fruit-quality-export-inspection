@@ -337,3 +337,22 @@ Later parameter sweep experiments will compare:
 - Morphology kernel size: 3, 5, 7
 - Connected component connectivity: 4 vs 8
 - Otsu segmentation before and after preprocessing
+
+## Step 5: Export Feature CSV
+
+Purpose: convert the sampled image dataset into feature tables that can be used for machine learning.
+
+Output files:
+
+- `outputs/features/train_features.csv`
+- `outputs/features/test_features.csv`
+
+Run batch feature extraction:
+
+```bash
+python main.py --export-features
+```
+
+Each CSV row contains metadata, labels, and handcrafted image features. The `class_name` value comes from the dataset folder name. The `fruit_type` label is one of `apple`, `banana`, or `orange`. The `quality` label is either `fresh` or `rotten`.
+
+These CSV files will be used in the next step to train Random Forest, KNN, and SVM models.
