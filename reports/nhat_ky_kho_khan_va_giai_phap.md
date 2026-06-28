@@ -365,3 +365,15 @@ Pipeline tổng thể đã ổn, test tự động pass, manual test đa số đ
 **Hướng cải thiện:**
 
 Tinh chỉnh defect map, lọc highlight/viền tốt hơn, tăng dữ liệu train, đánh giá thêm nhiều ảnh, và cân nhắc threshold riêng theo từng loại trái cây.
+
+## Buoc 10: Quyet dinh phan hang thi truong cuoi cung
+
+Du an bo sung lop phan hang thi truong cuoi cung de bien ket qua ky thuat thanh quyet dinh gan voi ung dung thuc te. Sau khi he thong da du doan loai trai cay, chat luong `fresh` hoac `rotten`, ty le khuyet tat va do tin cay cua mat na phan doan, nguoi dung van can mot ket luan ro rang hon de sap xep trai cay: xuat khau, noi dia, hoac loai bo.
+
+Cac nhan `Suitable`, `Need Recheck`, va `Not Suitable` huu ich cho buoc danh gia kha nang xuat khau, nhung chua du de dap ung muc tieu cuoi cung cua ung dung. Trong thuc te, trai cay khong chi duoc danh gia la co phu hop xuat khau hay khong, ma con can duoc dua vao kenh phan phoi phu hop. Vi du, trai cay con tuoi nhung co mot so khuyet tat nho co the khong dat xuat khau, nhung van co the ban o thi truong noi dia.
+
+Du an anh xa ket qua ky thuat sang quyet dinh sap xep thuc te bang cac luat don gian. Neu mo hinh du doan trai cay bi hong, he thong gan `Reject`. Neu trai cay con tuoi va `defect_ratio` thap, he thong gan `Export Grade`. Neu trai cay con tuoi nhung `defect_ratio` o muc trung binh hoac phan doan hoi dang nghi, he thong gan `Domestic Grade`. Neu mat na phan doan qua nho hoac qua lon, he thong co the gan `Domestic Grade` hoac `Reject` tuy muc do nghiem trong.
+
+Cach phan hang dua tren luat phu hop voi du an xu ly anh truyen thong vi de giai thich, de bao ve trong bao cao, va khong phu thuoc vao mang hoc sau. Lop quyet dinh nay cung khong lam thay doi cac thuat toan xu ly anh va khong can huan luyen lai mo hinh, nen phu hop voi muc tieu giu he thong don gian, ro rang va co tinh giao duc.
+
+Han che hien tai la cac nguong nhu `defect_ratio` va `mask_area_ratio` van mang tinh kinh nghiem. Ket qua co the bi anh huong boi anh chup qua toi, nen phuc tap, bong do, vat the khac trong anh, hoac phan doan chua chinh xac. Trong tuong lai, cac nguong nay nen duoc hieu chinh bang tap du lieu lon hon va danh gia boi nguoi co kinh nghiem trong phan loai nong san.

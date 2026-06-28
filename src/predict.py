@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from src.adaptive_pipeline import run_segmentation_pipeline
-from src.export_rules import assess_export_suitability
+from src.export_rules import assess_export_suitability, decide_market_grade
 from src.features import create_defect_map, extract_all_features_from_pipeline_result
 from src.io_utils import load_image
 
@@ -82,8 +82,10 @@ def predict_image(
     image_path: Path,
     fruit_model_path: Path,
     quality_model_path: Path,
+    save_figure: bool = True,
 ) -> dict[str, object]:
     """Run segmentation, features, and ML prediction for one image."""
+    _ = save_figure
     image = load_image(image_path)
     pipeline_result = run_segmentation_pipeline(image)
     features = extract_all_features_from_pipeline_result(pipeline_result)
@@ -126,5 +128,14 @@ def predict_image(
     result["export_suitability"] = export_result["suitability"]
     result["export_reasons"] = export_result["reasons"]
     result["export_rule_flags"] = export_result["rule_flags"]
+
+    market_grade, market_grade_reasons = decide_market_grade(
+        quality=quality,
+        defect_ratio=float(result["defect_ratio"]),
+        mask_area_ratio=float(result["mask_area_ratio"]),
+        circularity=float(result["circularity"]),
+    )
+    result["market_grade"] = market_grade
+    result["market_grade_reasons"] = market_grade_reasons
 
     return result

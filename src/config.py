@@ -43,6 +43,12 @@ MEDIUM_DEFECT_RATIO_THRESHOLD: float = 0.10
 LOW_CIRCULARITY_THRESHOLD: float = 0.35
 MIN_MASK_AREA_RATIO_THRESHOLD: float = 0.05
 
+# Final market grading thresholds.
+EXPORT_MAX_DEFECT_RATIO: float = 0.05
+DOMESTIC_MAX_DEFECT_RATIO: float = 0.15
+MIN_REASONABLE_MASK_RATIO: float = 0.05
+MAX_REASONABLE_MASK_RATIO: float = 0.85
+
 # Initial preprocessing values.
 # These will be explored later in parameter sweep experiments.
 DEFAULT_GAUSSIAN_KERNEL_SIZE: int = 5

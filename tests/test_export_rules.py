@@ -1,6 +1,6 @@
 """Tests for rule-based export suitability assessment."""
 
-from src.export_rules import assess_export_suitability
+from src.export_rules import assess_export_suitability, decide_market_grade
 
 
 def good_features() -> dict[str, object]:
@@ -93,3 +93,46 @@ def test_missing_feature_values_do_not_crash() -> None:
 
     assert result["suitability"] == "Suitable"
     assert len(result["reasons"]) >= 1
+
+
+def test_fresh_low_defect_returns_export_grade() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="fresh",
+        defect_ratio=0.02,
+        mask_area_ratio=0.40,
+        circularity=0.80,
+    )
+
+    assert market_grade == "Export Grade"
+    assert reasons
+
+def test_fresh_medium_defect_returns_domestic_grade() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="fresh",
+        defect_ratio=0.10,
+        mask_area_ratio=0.40,
+        circularity=0.80,
+    )
+
+    assert market_grade == "Domestic Grade"
+    assert reasons
+
+def test_rotten_quality_returns_reject_market_grade() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="rotten",
+        defect_ratio=0.01,
+        mask_area_ratio=0.40,
+    )
+
+    assert market_grade == "Reject"
+    assert reasons
+
+def test_unreasonable_mask_ratio_returns_domestic_or_reject() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="fresh",
+        defect_ratio=0.02,
+        mask_area_ratio=0.03,
+    )
+
+    assert market_grade in {"Domestic Grade", "Reject"}
+    assert reasons

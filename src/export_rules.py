@@ -8,11 +8,15 @@ import numpy as np
 
 from src.config import (
     DARK_BRIGHTNESS_THRESHOLD,
+    DOMESTIC_MAX_DEFECT_RATIO,
+    EXPORT_MAX_DEFECT_RATIO,
     HIGH_DEFECT_RATIO_THRESHOLD,
     HIGH_NOISE_THRESHOLD,
     LOW_CIRCULARITY_THRESHOLD,
+    MAX_REASONABLE_MASK_RATIO,
     MEDIUM_DEFECT_RATIO_THRESHOLD,
     MIN_MASK_AREA_RATIO_THRESHOLD,
+    MIN_REASONABLE_MASK_RATIO,
 )
 
 
@@ -112,3 +116,61 @@ def assess_export_suitability(
         "reasons": ["The fruit is predicted as fresh and defect ratio is acceptable."],
         "rule_flags": rule_flags,
     }
+
+def decide_market_grade(
+    quality: str,
+    defect_ratio: float,
+    mask_area_ratio: float,
+    circularity: float | None = None,
+) -> tuple[str, list[str]]:
+    """
+    Decide final market grade for fruit sorting.
+
+    Returns:
+        A tuple containing:
+        - market grade: "Export Grade", "Domestic Grade", or "Reject"
+        - list of explanation reasons
+    """
+    normalized_quality = quality.strip().lower()
+    reasons: list[str] = []
+
+    if normalized_quality == "rotten":
+        return "Reject", ["Rotten fruit should not be used for export or domestic sale."]
+
+    if mask_area_ratio < MIN_REASONABLE_MASK_RATIO:
+        if mask_area_ratio < MIN_REASONABLE_MASK_RATIO / 2.0:
+            return "Reject", [
+                "Fruit mask area is much too small, so the segmentation is not reliable enough for sorting.",
+            ]
+        reasons.append(
+            "Fruit mask area is small, so segmentation reliability is questionable."
+        )
+        return "Domestic Grade", reasons
+
+    if mask_area_ratio > MAX_REASONABLE_MASK_RATIO:
+        if mask_area_ratio > min(1.0, MAX_REASONABLE_MASK_RATIO + 0.10):
+            return "Reject", [
+                "Fruit mask area is much too large, so the image may include too much background or a failed mask.",
+            ]
+        reasons.append(
+            "Fruit mask area is large, so segmentation reliability is questionable."
+        )
+        return "Domestic Grade", reasons
+
+    if circularity is not None and circularity < LOW_CIRCULARITY_THRESHOLD:
+        reasons.append("Fruit shape looks abnormal, so it is safer for domestic review.")
+        return "Domestic Grade", reasons
+
+    if defect_ratio <= EXPORT_MAX_DEFECT_RATIO:
+        return "Export Grade", [
+            "Fresh fruit with low defect ratio is suitable for export.",
+        ]
+
+    if defect_ratio <= DOMESTIC_MAX_DEFECT_RATIO:
+        return "Domestic Grade", [
+            "Fruit is fresh but has visible defects, so it is better for the domestic market.",
+        ]
+
+    return "Reject", [
+        "Defect ratio is high, so the fruit should be rejected for final sorting.",
+    ]

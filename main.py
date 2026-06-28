@@ -16,6 +16,7 @@ from src.io_utils import load_image
 from src.ml_train import train_all_models
 from src.predict import predict_image
 from src.quality_analysis import analyze_image_quality, rgb_to_grayscale
+from src.system_evaluation import evaluate_system_on_test_set
 from src.visualization import (
     save_feature_extraction_figure,
     save_preprocessing_figure,
@@ -74,6 +75,17 @@ def parse_args() -> argparse.Namespace:
         "--predict-image",
         type=Path,
         help="Predict fruit type and quality for one image.",
+    )
+    parser.add_argument(
+        "--evaluate-system",
+        action="store_true",
+        help="Run end-to-end prediction evaluation on data/sample/test/.",
+    )
+    parser.add_argument(
+        "--eval-max-per-class",
+        type=int,
+        default=None,
+        help="Limit end-to-end evaluation to N images per class.",
     )
     parser.add_argument(
         "--gui",
@@ -291,7 +303,7 @@ def run_single_image_prediction(image_path: Path) -> None:
         output_path=figure_path,
         title=(
             f"Prediction: {result['fruit_type']} | {result['quality']} | "
-            f"{result['export_suitability']}"
+            f"{result['market_grade']}"
         ),
     )
 
@@ -299,14 +311,20 @@ def run_single_image_prediction(image_path: Path) -> None:
     print(f"- Image: {result['image_path']}")
     print(f"- Fruit type: {result['fruit_type']}")
     print(f"- Quality: {result['quality']}")
+    print(f"- Export suitability: {result['export_suitability']}")
+    print(f"- Final market grade: {result['market_grade']}")
     print("")
-    print("Export suitability:")
-    print(f"- Result: {result['export_suitability']}")
-    print("- Reasons:")
+    print("Export suitability reasons:")
     export_reasons = result["export_reasons"]
     if isinstance(export_reasons, list):
         for reason_index, reason in enumerate(export_reasons, start=1):
-            print(f"  {reason_index}. {reason}")
+            print(f"- {reason_index}. {reason}")
+    print("")
+    print("Market grade reasons:")
+    market_grade_reasons = result["market_grade_reasons"]
+    if isinstance(market_grade_reasons, list):
+        for reason_index, reason in enumerate(market_grade_reasons, start=1):
+            print(f"- {reason_index}. {reason}")
     print("")
     print("Important features:")
     print(f"- Area: {result['area']:.2f}")
@@ -325,6 +343,31 @@ def run_single_image_prediction(image_path: Path) -> None:
     print("")
     print("Saved figure:")
     print(figure_path)
+
+def run_system_evaluation(max_per_class: int | None = None) -> None:
+    """Run Step 11 end-to-end batch prediction evaluation."""
+    try:
+        result = evaluate_system_on_test_set(
+            test_dir=Path("data/sample/test"),
+            fruit_model_path=Path("models/fruit_type_model.pkl"),
+            quality_model_path=Path("models/quality_model.pkl"),
+            csv_output_path=Path("outputs/reports/end_to_end_test_predictions.csv"),
+            report_output_path=Path("outputs/reports/end_to_end_evaluation_report.txt"),
+            max_per_class=max_per_class,
+        )
+    except FileNotFoundError as error:
+        print(error)
+        print("Please run: python main.py --train-models")
+        return
+
+    print("End-to-end system evaluation:")
+    print(f"- Total images tested: {result.total_images}")
+    print(f"- Failed images: {result.failed_images}")
+    print(f"- Fruit type accuracy: {result.fruit_type_accuracy:.4f}")
+    print(f"- Quality accuracy: {result.quality_accuracy:.4f}")
+    print("Saved reports:")
+    print(f"  {result.csv_output_path}")
+    print(f"  {result.report_output_path}")
 
 def main() -> None:
     """Run the requested project utility command or print the startup message."""
@@ -364,6 +407,10 @@ def main() -> None:
 
     if args.predict_image is not None:
         run_single_image_prediction(args.predict_image)
+        return
+
+    if args.evaluate_system:
+        run_system_evaluation(args.eval_max_per_class)
         return
 
     if args.gui:

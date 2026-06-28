@@ -483,3 +483,62 @@ python main.py --train-models
   - `Not Suitable` for rotten fruit.
 - This manual test is only a sanity check, not a replacement for the formal evaluation report.
 
+
+## Step 10: Final Market Grading Decision
+
+Purpose: convert the technical prediction result into a practical sorting decision that is easier to use in a fruit inspection demo or small packing workflow.
+
+Final market grade classes:
+
+- `Export Grade`: fresh fruit with a low defect ratio and reasonable segmentation result.
+- `Domestic Grade`: fresh fruit with medium visible defects, abnormal shape, or mildly questionable segmentation.
+- `Reject`: rotten fruit, fruit with high defect ratio, or fruit where segmentation is too unreliable for sorting.
+
+Simple rule logic:
+
+1. If the predicted quality is `rotten`, the final grade is `Reject`.
+2. If the predicted quality is `fresh` and `defect_ratio` is low, the final grade is `Export Grade`.
+3. If the predicted quality is `fresh` and `defect_ratio` is medium, the final grade is `Domestic Grade`.
+4. If `mask_area_ratio` is too small or too large, the system treats segmentation reliability as questionable and assigns `Domestic Grade` or `Reject` depending on severity.
+5. If the shape looks abnormal from circularity, the system uses a conservative `Domestic Grade` decision.
+
+Example command:
+
+```bash
+python main.py --predict-image path/to/image.png
+```
+
+This layer is explainable and rule-based. It does not retrain the machine learning models. It uses the existing predicted quality, handcrafted features, and export suitability rules to produce a final market decision that is easier to explain in a report and oral defense.
+
+## Step 11: End-to-End Test Evaluation Report
+
+Purpose: run the complete trained system on every image under `data/sample/test/`, compare predictions against labels inferred from class folder names, and save formal evaluation outputs.
+
+Ground-truth labels are inferred as follows:
+
+- `freshapples` -> `fruit_type=apple`, `quality=fresh`
+- `freshbanana` -> `fruit_type=banana`, `quality=fresh`
+- `freshoranges` -> `fruit_type=orange`, `quality=fresh`
+- `rottenapples` -> `fruit_type=apple`, `quality=rotten`
+- `rottenbanana` -> `fruit_type=banana`, `quality=rotten`
+- `rottenoranges` -> `fruit_type=orange`, `quality=rotten`
+
+Required before evaluation:
+
+```bash
+python main.py --export-features
+python main.py --train-models
+```
+
+Command:
+
+```bash
+python main.py --evaluate-system
+```
+
+Outputs:
+
+- `outputs/reports/end_to_end_test_predictions.csv`
+- `outputs/reports/end_to_end_evaluation_report.txt`
+
+The CSV contains one row per image with the image path, true and predicted fruit type, true and predicted quality, export suitability, final market grade, important handcrafted features, and correctness flags. The text report includes total images tested, fruit type accuracy, quality accuracy, classification reports, confusion matrices, market grade counts, and a list of misclassified images.

@@ -36,6 +36,8 @@ class FruitQualityGUI:
         self.fruit_type_var = tk.StringVar(value="-")
         self.quality_var = tk.StringVar(value="-")
         self.export_var = tk.StringVar(value="-")
+        self.market_grade_var = tk.StringVar(value="-")
+        self.market_grade_label: ttk.Label | None = None
 
         self._build_layout()
 
@@ -68,6 +70,12 @@ class FruitQualityGUI:
         self._add_result_row(result_frame, "Fruit type:", self.fruit_type_var, 0)
         self._add_result_row(result_frame, "Quality:", self.quality_var, 1)
         self._add_result_row(result_frame, "Export suitability:", self.export_var, 2)
+        self.market_grade_label = self._add_result_row(
+            result_frame,
+            "Final market grade:",
+            self.market_grade_var,
+            3,
+        )
 
         bottom_frame = ttk.Frame(self.root, padding=(10, 0, 10, 10))
         bottom_frame.pack(fill=tk.BOTH, expand=True)
@@ -87,7 +95,7 @@ class FruitQualityGUI:
         self.feature_table.column("value", width=120, anchor=tk.E)
         self.feature_table.pack(fill=tk.BOTH, expand=True)
 
-        explanation_frame = ttk.LabelFrame(bottom_frame, text="Export Explanation", padding=8)
+        explanation_frame = ttk.LabelFrame(bottom_frame, text="Decision Explanation", padding=8)
         explanation_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
 
         self.explanation_text = tk.Text(explanation_frame, height=12, wrap=tk.WORD)
@@ -100,15 +108,17 @@ class FruitQualityGUI:
         label_text: str,
         value_var: tk.StringVar,
         row: int,
-    ) -> None:
+    ) -> ttk.Label:
         ttk.Label(parent, text=label_text).grid(row=row, column=0, sticky=tk.W, pady=4)
-        ttk.Label(parent, textvariable=value_var, font=("TkDefaultFont", 10, "bold")).grid(
+        value_label = ttk.Label(parent, textvariable=value_var, font=("TkDefaultFont", 10, "bold"))
+        value_label.grid(
             row=row,
             column=1,
             sticky=tk.W,
             pady=4,
             padx=(8, 0),
         )
+        return value_label
 
     def select_image(self) -> None:
         """Open a file picker and store the selected image path."""
@@ -167,6 +177,19 @@ class FruitQualityGUI:
         self.explanation_text.delete("1.0", tk.END)
         self.explanation_text.insert(tk.END, explanation)
         self.explanation_text.configure(state=tk.DISABLED)
+
+
+    def update_market_grade_color(self, market_grade: str) -> None:
+        """Apply a simple color cue for the final market grade."""
+        if self.market_grade_label is None:
+            return
+
+        grade_colors = {
+            "Export Grade": "green",
+            "Domestic Grade": "orange",
+            "Reject": "red",
+        }
+        self.market_grade_label.configure(foreground=grade_colors.get(market_grade, "black"))
 
     def update_feature_table(self, features: dict[str, object]) -> None:
         """Show the important handcrafted feature values."""

@@ -121,8 +121,12 @@ def test_predict_image_includes_export_suitability_fields(
         image_path=tmp_path / "orange.png",
         fruit_model_path=tmp_path / "fruit.pkl",
         quality_model_path=tmp_path / "quality.pkl",
+        save_figure=False,
     )
 
     assert result["export_suitability"] == "Suitable"
     assert isinstance(result["export_reasons"], list)
     assert isinstance(result["export_rule_flags"], dict)
+    assert result["market_grade"] == "Export Grade"
+    assert isinstance(result["market_grade_reasons"], list)
+    assert result["market_grade_reasons"]
