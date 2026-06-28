@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from src.adaptive_pipeline import run_segmentation_pipeline
+from src.export_rules import assess_export_suitability
 from src.features import create_defect_map, extract_all_features_from_pipeline_result
 from src.io_utils import load_image
 
@@ -116,5 +117,14 @@ def predict_image(
     }
     for feature_name in IMPORTANT_FEATURES:
         result[feature_name] = float(features.get(feature_name, 0.0))
+
+    export_result = assess_export_suitability(
+        fruit_type=fruit_type,
+        quality=quality,
+        features=result,
+    )
+    result["export_suitability"] = export_result["suitability"]
+    result["export_reasons"] = export_result["reasons"]
+    result["export_rule_flags"] = export_result["rule_flags"]
 
     return result

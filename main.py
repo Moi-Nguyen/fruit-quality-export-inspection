@@ -284,13 +284,24 @@ def run_single_image_prediction(image_path: Path) -> None:
         fruit_mask=result["fruit_mask"],
         defect_map=result["defect_map"],
         output_path=figure_path,
-        title=image_path.name,
+        title=(
+            f"Prediction: {result['fruit_type']} | {result['quality']} | "
+            f"{result['export_suitability']}"
+        ),
     )
 
     print("Prediction result:")
     print(f"- Image: {result['image_path']}")
     print(f"- Fruit type: {result['fruit_type']}")
     print(f"- Quality: {result['quality']}")
+    print("")
+    print("Export suitability:")
+    print(f"- Result: {result['export_suitability']}")
+    print("- Reasons:")
+    export_reasons = result["export_reasons"]
+    if isinstance(export_reasons, list):
+        for reason_index, reason in enumerate(export_reasons, start=1):
+            print(f"  {reason_index}. {reason}")
     print("")
     print("Important features:")
     print(f"- Area: {result['area']:.2f}")
