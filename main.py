@@ -13,6 +13,7 @@ from src.dataset_sampling import check_datasets, create_sample_dataset
 from src.features import create_defect_map, extract_all_features_from_pipeline_result
 from src.features_dataset import export_sample_features
 from src.io_utils import load_image
+from src.ml_train import train_all_models
 from src.quality_analysis import analyze_image_quality, rgb_to_grayscale
 from src.visualization import (
     save_feature_extraction_figure,
@@ -61,6 +62,11 @@ def parse_args() -> argparse.Namespace:
         "--export-features",
         action="store_true",
         help="Extract features for data/sample/ and save CSV files.",
+    )
+    parser.add_argument(
+        "--train-models",
+        action="store_true",
+        help="Train and evaluate classical ML models from feature CSV files.",
     )
     return parser.parse_args()
 
@@ -207,6 +213,48 @@ def run_feature_csv_export() -> None:
     print(f"- Test rows: {count_csv_rows(test_csv_path)}")
 
 
+
+def print_target_training_summary(title: str, target_results: dict[str, object]) -> None:
+    """Print model metrics for one classification target."""
+    print(f"{title}:")
+    for model_name, result in target_results["results"].items():
+        metrics = result["metrics"]
+        print(
+            f"  {model_name}: "
+            f"accuracy={metrics['accuracy']:.4f}, "
+            f"f1_macro={metrics['f1_macro']:.4f}"
+        )
+    print(f"  best: {target_results['best_model_name']}")
+
+def run_model_training() -> None:
+    """Run Step 6 machine learning training and evaluation."""
+    train_csv = Path("outputs/features/train_features.csv")
+    test_csv = Path("outputs/features/test_features.csv")
+    model_dir = Path("models")
+    report_dir = Path("outputs/reports")
+
+    all_results = train_all_models(
+        train_csv=train_csv,
+        test_csv=test_csv,
+        model_dir=model_dir,
+        report_dir=report_dir,
+    )
+
+    print(f"Feature count: {len(all_results['feature_columns'])}")
+    print_target_training_summary(
+        "Fruit type classification",
+        all_results["fruit_type"],
+    )
+    print_target_training_summary(
+        "Quality classification",
+        all_results["quality"],
+    )
+    print("Saved models:")
+    print(f"  {model_dir / 'fruit_type_model.pkl'}")
+    print(f"  {model_dir / 'quality_model.pkl'}")
+    print("Saved report:")
+    print(f"  {report_dir / 'ml_evaluation_report.txt'}")
+
 def main() -> None:
     """Run the requested project utility command or print the startup message."""
     args = parse_args()
@@ -237,6 +285,10 @@ def main() -> None:
 
     if args.export_features:
         run_feature_csv_export()
+        return
+
+    if args.train_models:
+        run_model_training()
         return
 
     print(STARTUP_MESSAGE)

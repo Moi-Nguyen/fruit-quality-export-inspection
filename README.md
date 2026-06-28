@@ -356,3 +356,32 @@ python main.py --export-features
 Each CSV row contains metadata, labels, and handcrafted image features. The `class_name` value comes from the dataset folder name. The `fruit_type` label is one of `apple`, `banana`, or `orange`. The `quality` label is either `fresh` or `rotten`.
 
 These CSV files will be used in the next step to train Random Forest, KNN, and SVM models.
+
+## Step 6: Machine Learning Training
+
+Purpose: train classical machine learning models from the handcrafted feature CSV files generated in Step 5.
+
+Models trained:
+
+- Random Forest
+- KNN
+- SVM
+
+Prediction targets:
+
+- `fruit_type`: apple, banana, orange
+- `quality`: fresh, rotten
+
+Run model training and evaluation:
+
+```bash
+python main.py --train-models
+```
+
+Outputs:
+
+- `models/fruit_type_model.pkl`
+- `models/quality_model.pkl`
+- `outputs/reports/ml_evaluation_report.txt`
+
+KNN and SVM use `StandardScaler` because distance-based and margin-based models are sensitive to feature scale. Random Forest uses the raw numeric handcrafted features and is useful for feature importance analysis later. The best model for each target is selected by highest macro F1-score, with accuracy used as a tie-breaker.
