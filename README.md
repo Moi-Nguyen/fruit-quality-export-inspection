@@ -410,4 +410,51 @@ Output:
 - Important extracted features such as area, color, brightness, contrast, noise, and defect ratio
 - Prediction visualization figure saved under `outputs/figures/`
 
-Export suitability rules are implemented in the next step. This step only performs ML prediction from handcrafted features.
+## Step 8: Export Suitability Assessment
+
+Purpose: convert the predicted fruit type, predicted quality, and extracted image features into an export decision.
+
+Possible decisions:
+
+- `Suitable`
+- `Not Suitable`
+- `Need Recheck`
+
+Rule logic summary:
+
+- Rotten prediction -> `Not Suitable`
+- High defect ratio -> `Not Suitable`
+- Medium defect ratio -> `Need Recheck`
+- Too dark or too noisy image -> `Need Recheck`
+- Abnormal shape for apple or orange -> `Need Recheck`
+- Fresh prediction with acceptable indicators -> `Suitable`
+
+Command:
+
+```bash
+python main.py --predict-image path/to/image.png
+```
+
+This rule-based layer is intentionally explainable and suitable for project defense. It uses simple priority rules instead of a second machine learning model, so each decision can be explained from the prediction and feature values.
+
+### Current Limitations and Notes
+
+- The project uses traditional image processing and handcrafted features, so the defect map is an approximate heuristic, not a perfect ground-truth defect segmentation.
+- Bright highlights, water droplets, leaves, shadows, and black rotated image borders may sometimes be detected as defects.
+- A fresh fruit can sometimes be predicted as rotten if it contains many visual artifacts or strong texture changes.
+- Some fresh fruits may be marked as `Need Recheck` when `defect_ratio` is medium, because the export suitability logic is intentionally conservative.
+- For export inspection, conservative decisions are acceptable because uncertain cases should be reviewed manually.
+- The current system prioritizes explainability and traditional image processing over maximum accuracy.
+- Future improvements may include better defect filtering, more robust segmentation, larger training samples, threshold tuning, and optional segmentation ground-truth evaluation if masks are available.
+
+### Manual Test Summary
+
+- One random image per class was tested after Step 8.
+- Fruit type prediction: 6/6 correct in the manual sample.
+- Quality prediction: 5/6 correct in the manual sample.
+- Export suitability logic produced:
+  - `Suitable` for clearly fresh low-defect fruit.
+  - `Need Recheck` for fresh fruit with medium defect ratio.
+  - `Not Suitable` for rotten fruit.
+- This manual test is only a sanity check, not a replacement for the formal evaluation report.
+
