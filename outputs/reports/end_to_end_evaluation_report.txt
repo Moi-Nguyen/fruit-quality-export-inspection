@@ -1,0 +1,82 @@
+End-to-End Test Evaluation Report
+
+Total images tested: 300
+Successful images: 300
+Failed images: 0
+Fruit type accuracy: 0.9500
+Quality accuracy: 0.9400
+
+Classification report for fruit_type:
+              precision    recall  f1-score   support
+
+       apple       0.92      0.94      0.93       100
+      banana       0.99      0.97      0.98       100
+      orange       0.94      0.94      0.94       100
+
+    accuracy                           0.95       300
+   macro avg       0.95      0.95      0.95       300
+weighted avg       0.95      0.95      0.95       300
+
+Classification report for quality:
+              precision    recall  f1-score   support
+
+       fresh       0.95      0.93      0.94       150
+      rotten       0.93      0.95      0.94       150
+
+    accuracy                           0.94       300
+   macro avg       0.94      0.94      0.94       300
+weighted avg       0.94      0.94      0.94       300
+
+Confusion matrix for fruit_type:
+labels: apple, banana, orange
+apple: 94 0 6
+banana: 3 97 0
+orange: 5 1 94
+
+Confusion matrix for quality:
+labels: fresh, rotten
+fresh: 140 10
+rotten: 8 142
+
+Market grade counts:
+- Domestic Grade: 98
+- Export Grade: 28
+- Reject: 174
+
+Misclassified images:
+- data\sample\test\freshapples\rotated_by_15_Screen Shot 2018-06-08 at 5.24.04 PM.png | fruit_type apple -> orange | quality fresh -> fresh
+- data\sample\test\freshapples\rotated_by_45_Screen Shot 2018-06-08 at 5.09.25 PM.png | fruit_type apple -> apple | quality fresh -> rotten
+- data\sample\test\freshapples\rotated_by_45_Screen Shot 2018-06-08 at 5.20.51 PM.png | fruit_type apple -> apple | quality fresh -> rotten
+- data\sample\test\freshapples\rotated_by_60_Screen Shot 2018-06-08 at 5.27.13 PM.png | fruit_type apple -> apple | quality fresh -> rotten
+- data\sample\test\freshapples\saltandpepper_Screen Shot 2018-06-08 at 5.34.01 PM.png | fruit_type apple -> apple | quality fresh -> rotten
+- data\sample\test\freshapples\Screen Shot 2018-06-08 at 5.19.58 PM.png | fruit_type apple -> apple | quality fresh -> rotten
+- data\sample\test\freshapples\Screen Shot 2018-06-08 at 5.27.54 PM.png | fruit_type apple -> apple | quality fresh -> rotten
+- data\sample\test\freshapples\vertical_flip_Screen Shot 2018-06-08 at 5.14.56 PM.png | fruit_type apple -> apple | quality fresh -> rotten
+- data\sample\test\freshbanana\rotated_by_15_Screen Shot 2018-06-12 at 9.59.12 PM.png | fruit_type banana -> apple | quality fresh -> fresh
+- data\sample\test\freshbanana\rotated_by_45_Screen Shot 2018-06-12 at 9.48.04 PM.png | fruit_type banana -> banana | quality fresh -> rotten
+- data\sample\test\freshoranges\saltandpepper_Screen Shot 2018-06-12 at 11.56.35 PM.png | fruit_type orange -> orange | quality fresh -> rotten
+- data\sample\test\freshoranges\Screen Shot 2018-06-13 at 12.11.57 AM.png | fruit_type orange -> orange | quality fresh -> rotten
+- data\sample\test\rottenapples\rotated_by_15_Screen Shot 2018-06-07 at 2.31.43 PM.png | fruit_type apple -> apple | quality rotten -> fresh
+- data\sample\test\rottenapples\rotated_by_45_Screen Shot 2018-06-08 at 2.46.36 PM.png | fruit_type apple -> apple | quality rotten -> fresh
+- data\sample\test\rottenapples\rotated_by_60_Screen Shot 2018-06-07 at 3.05.46 PM.png | fruit_type apple -> orange | quality rotten -> rotten
+- data\sample\test\rottenapples\rotated_by_60_Screen Shot 2018-06-08 at 2.40.56 PM.png | fruit_type apple -> orange | quality rotten -> rotten
+- data\sample\test\rottenapples\rotated_by_75_Screen Shot 2018-06-07 at 3.05.46 PM.png | fruit_type apple -> orange | quality rotten -> rotten
+- data\sample\test\rottenapples\rotated_by_75_Screen Shot 2018-06-08 at 2.34.47 PM.png | fruit_type apple -> apple | quality rotten -> fresh
+- data\sample\test\rottenapples\Screen Shot 2018-06-07 at 2.56.47 PM.png | fruit_type apple -> orange | quality rotten -> rotten
+- data\sample\test\rottenapples\translation_Screen Shot 2018-06-08 at 2.47.37 PM.png | fruit_type apple -> orange | quality rotten -> rotten
+- data\sample\test\rottenbanana\rotated_by_75_Screen Shot 2018-06-12 at 9.11.35 PM.png | fruit_type banana -> apple | quality rotten -> rotten
+- data\sample\test\rottenbanana\vertical_flip_Screen Shot 2018-06-12 at 9.16.57 PM.png | fruit_type banana -> apple | quality rotten -> rotten
+- data\sample\test\rottenoranges\rotated_by_15_Screen Shot 2018-06-12 at 11.21.29 PM.png | fruit_type orange -> orange | quality rotten -> fresh
+- data\sample\test\rottenoranges\rotated_by_15_Screen Shot 2018-06-12 at 11.26.44 PM.png | fruit_type orange -> apple | quality rotten -> rotten
+- data\sample\test\rottenoranges\rotated_by_30_Screen Shot 2018-06-12 at 11.23.40 PM.png | fruit_type orange -> orange | quality rotten -> fresh
+- data\sample\test\rottenoranges\rotated_by_30_Screen Shot 2018-06-12 at 11.44.06 PM.png | fruit_type orange -> apple | quality rotten -> rotten
+- data\sample\test\rottenoranges\rotated_by_45_Screen Shot 2018-06-12 at 11.20.40 PM.png | fruit_type orange -> orange | quality rotten -> fresh
+- data\sample\test\rottenoranges\rotated_by_45_Screen Shot 2018-06-12 at 11.31.44 PM.png | fruit_type orange -> orange | quality rotten -> fresh
+- data\sample\test\rottenoranges\saltandpepper_Screen Shot 2018-06-12 at 11.28.33 PM.png | fruit_type orange -> banana | quality rotten -> rotten
+- data\sample\test\rottenoranges\Screen Shot 2018-06-12 at 11.20.59 PM.png | fruit_type orange -> apple | quality rotten -> rotten
+- data\sample\test\rottenoranges\translation_Screen Shot 2018-06-12 at 11.26.44 PM.png | fruit_type orange -> apple | quality rotten -> rotten
+- data\sample\test\rottenoranges\translation_Screen Shot 2018-06-12 at 11.41.08 PM.png | fruit_type orange -> orange | quality rotten -> fresh
+- data\sample\test\rottenoranges\translation_Screen Shot 2018-06-12 at 11.42.56 PM.png | fruit_type orange -> apple | quality rotten -> rotten
+
+Failed images:
+- None
