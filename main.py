@@ -14,10 +14,12 @@ from src.features import create_defect_map, extract_all_features_from_pipeline_r
 from src.features_dataset import export_sample_features
 from src.io_utils import load_image
 from src.ml_train import train_all_models
+from src.predict import predict_image
 from src.quality_analysis import analyze_image_quality, rgb_to_grayscale
 from src.visualization import (
     save_feature_extraction_figure,
     save_preprocessing_figure,
+    save_prediction_figure,
     save_quality_analysis_figure,
     save_segmentation_figure,
 )
@@ -67,6 +69,11 @@ def parse_args() -> argparse.Namespace:
         "--train-models",
         action="store_true",
         help="Train and evaluate classical ML models from feature CSV files.",
+    )
+    parser.add_argument(
+        "--predict-image",
+        type=Path,
+        help="Predict fruit type and quality for one image.",
     )
     return parser.parse_args()
 
@@ -255,6 +262,54 @@ def run_model_training() -> None:
     print("Saved report:")
     print(f"  {report_dir / 'ml_evaluation_report.txt'}")
 
+def run_single_image_prediction(image_path: Path) -> None:
+    """Run Step 7 single-image ML prediction."""
+    fruit_model_path = Path("models/fruit_type_model.pkl")
+    quality_model_path = Path("models/quality_model.pkl")
+
+    try:
+        result = predict_image(
+            image_path=image_path,
+            fruit_model_path=fruit_model_path,
+            quality_model_path=quality_model_path,
+        )
+    except FileNotFoundError as error:
+        print(error)
+        print("Please run: python main.py --train-models")
+        return
+
+    figure_path = FIGURES_DIR / f"prediction_{image_path.stem}.png"
+    save_prediction_figure(
+        original=result["original_image"],
+        fruit_mask=result["fruit_mask"],
+        defect_map=result["defect_map"],
+        output_path=figure_path,
+        title=image_path.name,
+    )
+
+    print("Prediction result:")
+    print(f"- Image: {result['image_path']}")
+    print(f"- Fruit type: {result['fruit_type']}")
+    print(f"- Quality: {result['quality']}")
+    print("")
+    print("Important features:")
+    print(f"- Area: {result['area']:.2f}")
+    print(f"- Perimeter: {result['perimeter']:.2f}")
+    print(f"- Circularity: {result['circularity']:.2f}")
+    print(f"- Aspect ratio: {result['aspect_ratio']:.2f}")
+    print(f"- Mask area ratio: {result['mask_area_ratio']:.2f}")
+    print(
+        "- Mean RGB: "
+        f"({result['mean_r']:.2f}, {result['mean_g']:.2f}, {result['mean_b']:.2f})"
+    )
+    print(f"- Brightness: {result['brightness']:.2f}")
+    print(f"- Contrast: {result['contrast']:.2f}")
+    print(f"- Noise level: {result['noise_level']:.2f}")
+    print(f"- Defect ratio: {result['defect_ratio']:.2f}")
+    print("")
+    print("Saved figure:")
+    print(figure_path)
+
 def main() -> None:
     """Run the requested project utility command or print the startup message."""
     args = parse_args()
@@ -289,6 +344,10 @@ def main() -> None:
 
     if args.train_models:
         run_model_training()
+        return
+
+    if args.predict_image is not None:
+        run_single_image_prediction(args.predict_image)
         return
 
     print(STARTUP_MESSAGE)

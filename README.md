@@ -385,3 +385,29 @@ Outputs:
 - `outputs/reports/ml_evaluation_report.txt`
 
 KNN and SVM use `StandardScaler` because distance-based and margin-based models are sensitive to feature scale. Random Forest uses the raw numeric handcrafted features and is useful for feature importance analysis later. The best model for each target is selected by highest macro F1-score, with accuracy used as a tie-breaker.
+
+## Step 7: Single Image Prediction
+
+Purpose: run the complete traditional image processing pipeline on one image, extract handcrafted features, and predict fruit type and quality with the trained machine learning models.
+
+Required before prediction:
+
+```bash
+python main.py --export-features
+python main.py --train-models
+```
+
+Command:
+
+```bash
+python main.py --predict-image data/sample/test/freshapples/<image_name>
+```
+
+Output:
+
+- Predicted `fruit_type`
+- Predicted `quality`
+- Important extracted features such as area, color, brightness, contrast, noise, and defect ratio
+- Prediction visualization figure saved under `outputs/figures/`
+
+Export suitability rules are implemented in the next step. This step only performs ML prediction from handcrafted features.

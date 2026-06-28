@@ -138,6 +138,23 @@ def save_feature_extraction_figure(
     plt.close(figure)
 
 
+
+def save_prediction_figure(
+    original: np.ndarray,
+    fruit_mask: np.ndarray,
+    defect_map: np.ndarray,
+    output_path: Path,
+    title: str | None = None,
+) -> None:
+    """Save original image, fruit mask, and defect map for prediction."""
+    save_feature_extraction_figure(
+        original=original,
+        fruit_mask=fruit_mask,
+        defect_map=defect_map,
+        output_path=output_path,
+        title=title,
+    )
+
 def save_segmentation_figure(
     original: np.ndarray,
     grayscale: np.ndarray,
