@@ -437,6 +437,31 @@ python main.py --predict-image path/to/image.png
 
 This rule-based layer is intentionally explainable and suitable for project defense. It uses simple priority rules instead of a second machine learning model, so each decision can be explained from the prediction and feature values.
 
+## Step 9: Tkinter GUI
+
+Purpose: provide a simple desktop interface for running the trained fruit inspection system without typing prediction commands for every image.
+
+Features:
+
+- Load one fruit image with a file picker (`png`, `jpg`, `jpeg`, or `bmp`)
+- Run the existing single-image prediction pipeline
+- Display the original image, fruit mask, and defect map
+- Show fruit type, quality, and export suitability
+- Show export suitability reasons in a readable explanation box
+- Show important handcrafted features such as area, circularity, color, brightness, contrast, noise level, and defect ratio
+
+Command:
+
+```bash
+python main.py --gui
+```
+
+Note: train the models first if model files are missing:
+
+```bash
+python main.py --train-models
+```
+
 ### Current Limitations and Notes
 
 - The project uses traditional image processing and handcrafted features, so the defect map is an approximate heuristic, not a perfect ground-truth defect segmentation.

@@ -75,6 +75,11 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Predict fruit type and quality for one image.",
     )
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Start the Tkinter desktop GUI.",
+    )
     return parser.parse_args()
 
 
@@ -359,6 +364,12 @@ def main() -> None:
 
     if args.predict_image is not None:
         run_single_image_prediction(args.predict_image)
+        return
+
+    if args.gui:
+        from src.gui_app import run_gui
+
+        run_gui()
         return
 
     print(STARTUP_MESSAGE)
