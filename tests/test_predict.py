@@ -10,7 +10,15 @@ import pytest
 from sklearn.neighbors import KNeighborsClassifier
 
 from src import predict
-from src.predict import build_single_feature_vector, load_model_bundle, predict_image, predict_with_bundle
+from src.predict import (
+    build_single_feature_vector,
+    clear_model_cache,
+    get_model_bundle,
+    load_model_bundle,
+    predict_image,
+    predict_with_bundle,
+    resize_image_for_processing,
+)
 
 
 def test_build_single_feature_vector_returns_2d_float32_array() -> None:
@@ -66,6 +74,45 @@ def test_load_model_bundle_reads_pickle_bundle(tmp_path: Path) -> None:
 
     assert loaded["feature_columns"] == ["area"]
 
+def test_get_model_bundle_reuses_cached_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    clear_model_cache()
+    model_path = tmp_path / "model.pkl"
+    model_path.write_bytes(b"placeholder")
+    calls = []
+    bundle = {"model": object(), "feature_columns": ["area"]}
+
+    def fake_load_model_bundle(path: Path) -> dict[str, object]:
+        calls.append(path)
+        return bundle
+
+    monkeypatch.setattr(predict, "load_model_bundle", fake_load_model_bundle)
+
+    first = get_model_bundle(model_path)
+    second = get_model_bundle(model_path)
+
+    assert first is second
+    assert calls == [model_path]
+    clear_model_cache()
+
+def test_resize_image_for_processing_keeps_small_image_unchanged() -> None:
+    image = np.zeros((20, 30, 3), dtype=np.uint8)
+
+    resized, was_resized = resize_image_for_processing(image, max_side=40)
+
+    assert resized is image
+    assert was_resized is False
+
+def test_resize_image_for_processing_scales_large_image_proportionally() -> None:
+    image = np.zeros((100, 200, 3), dtype=np.uint8)
+
+    resized, was_resized = resize_image_for_processing(image, max_side=50)
+
+    assert resized.shape == (25, 50, 3)
+    assert was_resized is True
+
 def test_predict_image_includes_export_suitability_fields(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -113,8 +160,13 @@ def test_predict_image_includes_export_suitability_fields(
     monkeypatch.setattr(predict, "load_image", fake_load_image)
     monkeypatch.setattr(predict, "run_segmentation_pipeline", fake_run_segmentation_pipeline)
     monkeypatch.setattr(predict, "extract_all_features_from_pipeline_result", fake_extract_features)
-    monkeypatch.setattr(predict, "load_model_bundle", fake_load_model_bundle)
+    monkeypatch.setattr(predict, "get_model_bundle", fake_load_model_bundle)
     monkeypatch.setattr(predict, "predict_with_bundle", fake_predict_with_bundle)
+    monkeypatch.setattr(
+        predict,
+        "predict_label_and_confidence",
+        lambda features, model_bundle: (next(predictions), 0.90),
+    )
     monkeypatch.setattr(predict, "create_defect_map", lambda original, grayscale, fruit_mask: mask)
 
     result = predict_image(
@@ -130,3 +182,137 @@ def test_predict_image_includes_export_suitability_fields(
     assert result["market_grade"] == "Export Grade"
     assert isinstance(result["market_grade_reasons"], list)
     assert result["market_grade_reasons"]
+    assert isinstance(result["processing_time_seconds"], float)
+    assert result["resized_for_processing"] is False
+
+
+def test_predict_label_and_confidence_uses_predict_proba() -> None:
+    model = KNeighborsClassifier(n_neighbors=1)
+    model.fit(np.array([[1.0], [10.0]], dtype=np.float32), ["apple", "banana"])
+    bundle = {"model": model, "feature_columns": ["area"]}
+
+    label, confidence = predict.predict_label_and_confidence({"area": 9.5}, bundle)
+
+    assert label == "banana"
+    assert confidence == 1.0
+
+
+def test_predict_image_includes_confidence_keys_when_possible(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    image = np.zeros((4, 4, 3), dtype=np.uint8)
+    mask = np.ones((4, 4), dtype=bool)
+
+    class ProbabilityModel:
+        classes_ = np.array(["apple", "orange"])
+
+        def predict(self, feature_vector: np.ndarray) -> np.ndarray:
+            return np.array(["orange"])
+
+        def predict_proba(self, feature_vector: np.ndarray) -> np.ndarray:
+            return np.array([[0.25, 0.75]])
+
+    def fake_extract_features(pipeline_result: dict[str, object]) -> dict[str, object]:
+        return {
+            "area": 16.0,
+            "perimeter": 16.0,
+            "circularity": 0.80,
+            "aspect_ratio": 1.0,
+            "mask_area_ratio": 0.50,
+            "mean_r": 120.0,
+            "mean_g": 130.0,
+            "mean_b": 110.0,
+            "brightness": 120.0,
+            "contrast": 30.0,
+            "noise_level": 5.0,
+            "defect_ratio": 0.02,
+        }
+
+    monkeypatch.setattr(predict, "load_image", lambda image_path: image)
+    monkeypatch.setattr(
+        predict,
+        "run_segmentation_pipeline",
+        lambda input_image: {
+            "original_image": input_image,
+            "grayscale": np.zeros((4, 4), dtype=np.uint8),
+            "fruit_mask": mask,
+        },
+    )
+    monkeypatch.setattr(predict, "extract_all_features_from_pipeline_result", fake_extract_features)
+    monkeypatch.setattr(
+        predict,
+        "get_model_bundle",
+        lambda model_path: {"model": ProbabilityModel(), "feature_columns": ["area"]},
+    )
+    monkeypatch.setattr(predict, "create_defect_map", lambda original, grayscale, fruit_mask: mask)
+
+    result = predict_image(
+        image_path=tmp_path / "orange.png",
+        fruit_model_path=tmp_path / "fruit.pkl",
+        quality_model_path=tmp_path / "quality.pkl",
+        save_figure=False,
+    )
+
+    assert result["fruit_type_confidence"] == 0.75
+    assert result["quality_confidence"] == 0.75
+
+def test_predict_image_adds_low_fruit_type_confidence_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    image = np.zeros((4, 4, 3), dtype=np.uint8)
+    mask = np.ones((4, 4), dtype=bool)
+
+    def fake_extract_features(pipeline_result: dict[str, object]) -> dict[str, object]:
+        return {
+            "area": 16.0,
+            "perimeter": 16.0,
+            "circularity": 0.80,
+            "aspect_ratio": 1.0,
+            "mask_area_ratio": 0.50,
+            "mean_r": 120.0,
+            "mean_g": 130.0,
+            "mean_b": 110.0,
+            "brightness": 120.0,
+            "contrast": 30.0,
+            "noise_level": 5.0,
+            "defect_ratio": 0.02,
+        }
+
+    predictions = iter([("orange", 0.44), ("fresh", 0.91)])
+
+    monkeypatch.setattr(predict, "load_image", lambda image_path: image)
+    monkeypatch.setattr(
+        predict,
+        "run_segmentation_pipeline",
+        lambda input_image: {
+            "original_image": input_image,
+            "grayscale": np.zeros((4, 4), dtype=np.uint8),
+            "fruit_mask": mask,
+        },
+    )
+    monkeypatch.setattr(predict, "extract_all_features_from_pipeline_result", fake_extract_features)
+    monkeypatch.setattr(
+        predict,
+        "get_model_bundle",
+        lambda model_path: {"model": object(), "feature_columns": ["area"]},
+    )
+    monkeypatch.setattr(
+        predict,
+        "predict_label_and_confidence",
+        lambda features, model_bundle: next(predictions),
+    )
+    monkeypatch.setattr(predict, "create_defect_map", lambda original, grayscale, fruit_mask: mask)
+
+    result = predict_image(
+        image_path=tmp_path / "external.png",
+        fruit_model_path=tmp_path / "fruit.pkl",
+        quality_model_path=tmp_path / "quality.pkl",
+        save_figure=False,
+    )
+
+    assert result["fruit_type"] == "orange"
+    assert result["fruit_type_confidence"] == 0.44
+    assert "Fruit type confidence is low; manual recheck is recommended." in result["export_reasons"]
+    assert "Fruit type confidence is low; manual recheck is recommended." in result["market_grade_reasons"]

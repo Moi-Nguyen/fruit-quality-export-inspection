@@ -105,11 +105,32 @@ def create_models() -> dict[str, object]:
                 ("scaler", StandardScaler()),
                 (
                     "model",
-                    SVC(kernel="rbf", C=1.0, gamma="scale", class_weight="balanced"),
+                    SVC(
+                        kernel="rbf",
+                        C=1.0,
+                        gamma="scale",
+                        class_weight="balanced",
+                        probability=True,
+                    ),
                 ),
             ]
         ),
     }
+
+def model_supports_confidence(model: object) -> bool:
+    """Return True when the fitted model can expose class probabilities."""
+    return hasattr(model, "predict_proba")
+
+def model_selection_score(model_name: str, model: object, metrics: dict[str, object]) -> tuple[float, float, int, int]:
+    """Score models by accuracy first, then confidence support for tied metrics."""
+    confidence_capable = 1 if model_supports_confidence(model) else 0
+    random_forest_preference = 1 if model_name == "random_forest" else 0
+    return (
+        float(metrics["f1_macro"]),
+        float(metrics["accuracy"]),
+        confidence_capable,
+        random_forest_preference,
+    )
 
 
 def evaluate_model(model, X_test: np.ndarray, y_test: np.ndarray) -> dict[str, object]:
@@ -145,9 +166,10 @@ def train_and_evaluate_for_target(
 
     best_model_name = max(
         results,
-        key=lambda name: (
-            results[name]["metrics"]["f1_macro"],
-            results[name]["metrics"]["accuracy"],
+        key=lambda name: model_selection_score(
+            name,
+            results[name]["model"],
+            results[name]["metrics"],
         ),
     )
 

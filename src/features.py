@@ -7,6 +7,8 @@ import math
 import numpy as np
 
 from src.adaptive_pipeline import run_segmentation_pipeline
+from src.components import compute_component_stats, connected_component_labeling
+from src.morphology import erode_binary
 
 
 def validate_mask(mask: np.ndarray) -> None:
@@ -224,8 +226,72 @@ def extract_color_features(
 ) -> dict[str, float]:
     """Extract simple color statistics and histograms."""
     features = compute_rgb_mean_std(image, mask)
+    features.update(compute_color_category_features(image, mask))
     features.update(compute_rgb_histogram(image, mask, bins_per_channel=bins_per_channel))
     return features
+
+def _rgb_to_hsv(pixels: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Convert RGB pixels in 0..255 range to HSV arrays in 0..1 range."""
+    pixels_float = pixels.astype(np.float32) / 255.0
+    red = pixels_float[:, 0]
+    green = pixels_float[:, 1]
+    blue = pixels_float[:, 2]
+
+    max_channel = np.max(pixels_float, axis=1)
+    min_channel = np.min(pixels_float, axis=1)
+    delta = max_channel - min_channel
+
+    hue = np.zeros_like(max_channel, dtype=np.float32)
+    non_gray = delta > 1e-6
+
+    red_is_max = (max_channel == red) & non_gray
+    green_is_max = (max_channel == green) & non_gray
+    blue_is_max = (max_channel == blue) & non_gray
+
+    hue[red_is_max] = ((green[red_is_max] - blue[red_is_max]) / delta[red_is_max]) % 6.0
+    hue[green_is_max] = ((blue[green_is_max] - red[green_is_max]) / delta[green_is_max]) + 2.0
+    hue[blue_is_max] = ((red[blue_is_max] - green[blue_is_max]) / delta[blue_is_max]) + 4.0
+    hue = hue / 6.0
+
+    saturation = np.zeros_like(max_channel, dtype=np.float32)
+    saturation[max_channel > 1e-6] = delta[max_channel > 1e-6] / max_channel[max_channel > 1e-6]
+    value = max_channel
+    return hue, saturation, value
+
+def compute_color_category_features(image: np.ndarray, mask: np.ndarray) -> dict[str, float]:
+    """Compute explainable HSV color ratios inside the fruit mask."""
+    pixels = get_masked_pixels(image, mask)
+    feature_names = [
+        "red_ratio",
+        "yellow_ratio",
+        "orange_ratio",
+        "green_ratio",
+        "brown_dark_ratio",
+        "saturation_mean",
+        "saturation_std",
+    ]
+    if pixels.shape[0] == 0:
+        return {name: 0.0 for name in feature_names}
+
+    hue, saturation, value = _rgb_to_hsv(pixels[:, :3])
+    colorful = (saturation >= 0.25) & (value >= 0.18)
+
+    red = colorful & ((hue <= 0.04) | (hue >= 0.94))
+    orange = colorful & (hue > 0.04) & (hue <= 0.11)
+    yellow = colorful & (hue > 0.11) & (hue <= 0.19)
+    green = colorful & (hue > 0.19) & (hue <= 0.46)
+    brown_dark = (value < 0.35) & (saturation >= 0.15) & (hue > 0.04) & (hue <= 0.18)
+
+    pixel_count = float(pixels.shape[0])
+    return {
+        "red_ratio": float(np.sum(red) / pixel_count),
+        "yellow_ratio": float(np.sum(yellow) / pixel_count),
+        "orange_ratio": float(np.sum(orange) / pixel_count),
+        "green_ratio": float(np.sum(green) / pixel_count),
+        "brown_dark_ratio": float(np.sum(brown_dark) / pixel_count),
+        "saturation_mean": float(np.mean(saturation)),
+        "saturation_std": float(np.std(saturation)),
+    }
 
 
 def compute_gradient_magnitude(gray: np.ndarray) -> np.ndarray:
@@ -277,7 +343,7 @@ def extract_texture_features(gray: np.ndarray, mask: np.ndarray) -> dict[str, fl
 
 
 def create_defect_map(image: np.ndarray, gray: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    """Create a simple heuristic defect map inside the fruit region."""
+    """Create a robust heuristic defect map inside the fruit interior."""
     _validate_color_image(image)
     if not isinstance(gray, np.ndarray) or gray.ndim != 2:
         raise ValueError("Grayscale image must be a 2D NumPy array.")
@@ -290,21 +356,45 @@ def create_defect_map(image: np.ndarray, gray: np.ndarray, mask: np.ndarray) -> 
     if np.sum(binary_mask) == 0:
         return defect_map
 
+    interior_mask = erode_binary(binary_mask.astype(np.uint8), kernel_size=5, shape="square").astype(bool)
+    if np.sum(interior_mask) == 0:
+        interior_mask = erode_binary(binary_mask.astype(np.uint8), kernel_size=3, shape="cross").astype(bool)
+    if np.sum(interior_mask) == 0:
+        return defect_map
+
     gray_float = gray.astype(np.float32)
-    gray_inside = gray_float[binary_mask]
+    gray_inside = gray_float[interior_mask]
     q25 = float(np.percentile(gray_inside, 25))
     q75 = float(np.percentile(gray_inside, 75))
     iqr = q75 - q25
 
     rgb_image = image[:, :, :3].astype(np.float32)
     color_difference = np.max(rgb_image, axis=2) - np.min(rgb_image, axis=2)
+    max_channel = np.max(rgb_image, axis=2)
+    min_channel = np.min(rgb_image, axis=2)
+    saturation_proxy = np.zeros_like(max_channel, dtype=np.float32)
+    saturation_proxy[max_channel > 0] = (max_channel[max_channel > 0] - min_channel[max_channel > 0]) / max_channel[max_channel > 0]
 
     dark_defects = gray_float < (q25 - 0.5 * iqr)
-    bright_low_color_defects = (gray_float > (q75 + 0.5 * iqr)) & (color_difference < 30)
-    defects_inside_mask = binary_mask & (dark_defects | bright_low_color_defects)
+    bright_low_color_defects = (gray_float > (q75 + 0.8 * iqr)) & (color_difference < 25)
+    specular_highlights = (gray_float >= 235) & (saturation_proxy <= 0.18)
+    defects_inside_mask = interior_mask & (dark_defects | bright_low_color_defects) & ~specular_highlights
 
     defect_map[defects_inside_mask] = 1
+    defect_map = remove_small_defect_components(defect_map, min_area=4)
     return defect_map
+
+def remove_small_defect_components(defect_map: np.ndarray, min_area: int = 4) -> np.ndarray:
+    """Remove tiny connected defect components from a binary map."""
+    labels, num_components = connected_component_labeling(defect_map.astype(np.uint8), connectivity=8)
+    if num_components == 0:
+        return np.zeros_like(defect_map, dtype=np.uint8)
+
+    cleaned = np.zeros_like(defect_map, dtype=np.uint8)
+    for component in compute_component_stats(labels, num_components):
+        if component["area"] >= min_area:
+            cleaned[labels == component["label"]] = 1
+    return cleaned
 
 
 def extract_defect_features(
@@ -319,11 +409,15 @@ def extract_defect_features(
         return {"defect_area": 0.0, "defect_ratio": 0.0}
 
     defect_map = create_defect_map(image, gray, mask)
+    interior_mask = erode_binary(binary_mask.astype(np.uint8), kernel_size=5, shape="square").astype(bool)
+    if np.sum(interior_mask) == 0:
+        interior_mask = binary_mask
+    inspected_area = int(np.sum(interior_mask))
     defect_area = int(np.sum(defect_map))
 
     return {
         "defect_area": float(defect_area),
-        "defect_ratio": float(defect_area / fruit_area),
+        "defect_ratio": float(defect_area / inspected_area),
     }
 
 

@@ -197,3 +197,48 @@ def test_extract_all_features_from_pipeline_result_works_with_synthetic_result()
     assert features["contrast"] == 15.0
     assert features["noise_level"] == 2.0
     assert features["preprocessing_method"] == "gaussian_filter"
+
+
+def test_color_ratio_features_on_synthetic_rgb_images() -> None:
+    image = np.zeros((2, 4, 3), dtype=np.uint8)
+    image[:, 0] = [220, 20, 20]
+    image[:, 1] = [230, 150, 20]
+    image[:, 2] = [230, 220, 20]
+    image[:, 3] = [20, 180, 40]
+    mask = np.ones((2, 4), dtype=np.uint8)
+
+    features = extract_color_features(image, mask, bins_per_channel=4)
+
+    assert features["red_ratio"] == 0.25
+    assert features["orange_ratio"] == 0.25
+    assert features["yellow_ratio"] == 0.25
+    assert features["green_ratio"] == 0.25
+    assert "saturation_mean" in features
+    assert "saturation_std" in features
+
+
+def test_highlight_pixels_are_not_counted_as_defects() -> None:
+    image = np.full((9, 9, 3), 120, dtype=np.uint8)
+    gray = np.full((9, 9), 120, dtype=np.uint8)
+    mask = np.ones((9, 9), dtype=np.uint8)
+    image[4:6, 4:6] = [255, 255, 255]
+    gray[4:6, 4:6] = 255
+
+    defect_map = create_defect_map(image, gray, mask)
+
+    assert int(np.sum(defect_map)) == 0
+
+
+def test_boundary_only_artifacts_do_not_create_high_defect_ratio() -> None:
+    image = np.full((12, 12, 3), 130, dtype=np.uint8)
+    gray = np.full((12, 12), 130, dtype=np.uint8)
+    mask = np.ones((12, 12), dtype=np.uint8)
+    gray[0, :] = 20
+    gray[-1, :] = 20
+    gray[:, 0] = 20
+    gray[:, -1] = 20
+    image[gray == 20] = [25, 18, 12]
+
+    features = extract_defect_features(image, gray, mask)
+
+    assert features["defect_ratio"] == 0.0

@@ -15,6 +15,7 @@ from src.ml_train import (
     create_models,
     evaluate_model,
     get_numeric_feature_columns,
+    model_selection_score,
     save_metrics_report,
     save_model_bundle,
     train_all_models,
@@ -117,6 +118,21 @@ def test_train_and_evaluate_for_target_works_on_tiny_dataset() -> None:
     assert result["target"] == "fruit_type"
     assert set(result["results"].keys()) == {"random_forest", "knn", "svm"}
     assert result["best_model_name"] in result["results"]
+
+def test_model_selection_prefers_confidence_capable_model_when_metrics_tie() -> None:
+    class NoConfidenceModel:
+        pass
+
+    class ConfidenceModel:
+        def predict_proba(self) -> None:
+            return None
+
+    metrics = {"f1_macro": 0.95, "accuracy": 0.90}
+
+    no_confidence_score = model_selection_score("svm", NoConfidenceModel(), metrics)
+    confidence_score = model_selection_score("random_forest", ConfidenceModel(), metrics)
+
+    assert confidence_score > no_confidence_score
 
 
 def test_save_model_bundle_creates_pickle_file(tmp_path: Path) -> None:

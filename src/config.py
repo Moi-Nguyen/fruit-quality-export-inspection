@@ -21,6 +21,10 @@ TRAIN_SAMPLES_PER_CLASS: int = 150
 TEST_SAMPLES_PER_CLASS: int = 50
 IMAGE_SIZE: tuple[int, int] = (128, 128)
 
+# Practical demo/prototype optimization: large camera images are resized before
+# handcrafted processing so the GUI remains responsive while preserving aspect ratio.
+MAX_PROCESSING_SIDE: int = 768
+
 CLASS_NAMES: list[str] = [
     "freshapples",
     "freshbanana",
