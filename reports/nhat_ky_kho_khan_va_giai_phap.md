@@ -434,3 +434,47 @@ Vung `Decision Explanation` tiep tuc giu thanh cuon doc va chia cac ly do thanh 
 O Step 19, giao dien Tkinter duoc tinh gon theo phong cach dashboard xanh la/trang de tang kha nang doc khi demo va tao cam giac chuyen nghiep hon cho do an dai hoc. Header, thanh dieu khien, the `Image Analysis`, the `Prediction Results`, bang `Important Features`, vung `Decision Explanation`, badge trang thai va nut `Clear` duoc sap xep lai thong thoang, ro rang va nhat quan hon.
 
 Nhom chu dong loai bo cac thanh phan cong nghiep hoac khong can thiet nhu sidebar, menu phong thi nghiem, thong tin CUDA/device/footer, menu ho tro/tai lieu va noi dung gia lap phuc tap. Cach lam nay giu giao dien phu hop voi pham vi de tai dai hoc, tap trung vao anh dau vao, ket qua du doan, dac trung quan trong va giai thich quyet dinh ma khong thay doi pipeline xu ly anh, mo hinh ML hay quy tac danh gia xuat khau.
+
+## Hoàn thiện tài liệu và chuẩn bị bảo vệ
+
+### Nội dung đã hoàn thiện
+
+- Nhóm đã cấu trúc lại `README.md` thành tài liệu hướng dẫn cuối cùng cho dự án.
+- Tài liệu hiện mô tả mục tiêu, ràng buộc công nghệ, pipeline đầy đủ, cấu trúc thư mục, cách cài đặt, cách chạy lệnh và kết quả đánh giá đã lưu.
+- Nhóm đã bổ sung phần câu hỏi bảo vệ để giải thích các quyết định kỹ thuật như xử lý ảnh truyền thống, không dùng OpenCV, tiền xử lý thích nghi, Otsu thresholding, morphology, connected components, đặc trưng thủ công và mô hình học máy.
+- Nhóm đã tạo thêm `reports/cau_hoi_bao_ve.md` bằng tiếng Việt để hỗ trợ luyện trả lời khi bảo vệ.
+
+### Vì sao tài liệu quan trọng
+
+- Tài liệu giúp giảng viên hiểu hệ thống theo đúng luồng: ảnh đầu vào -> xử lý ảnh -> đặc trưng -> mô hình -> quyết định xuất khẩu.
+- Tài liệu giúp nhóm chứng minh rằng thuật toán lõi được triển khai bằng NumPy và vẫn tuân thủ ràng buộc không dùng OpenCV cho xử lý ảnh.
+- Tài liệu giúp người khác chạy lại kiểm thử, huấn luyện, dự đoán một ảnh, đánh giá toàn hệ thống và mở GUI mà không cần đọc toàn bộ mã nguồn.
+
+### Cách nhóm sẽ giải thích hệ thống
+
+- Nhóm sẽ bắt đầu từ mục tiêu bài toán: kiểm tra chất lượng trái cây và đánh giá khả năng xuất khẩu.
+- Nhóm sẽ trình bày pipeline theo từng bước nhỏ để cho thấy vai trò của mỗi thuật toán.
+- Nhóm sẽ dùng kết quả đánh giá đã lưu để nói về hiệu năng, đồng thời nhấn mạnh rằng `Need Recheck` là cơ chế an toàn khi confidence thấp hoặc bằng chứng ảnh chưa nhất quán.
+- Nhóm sẽ demo GUI để minh họa cách hệ thống hiển thị dự đoán, độ tin cậy và quyết định phân hạng.
+
+### Hạn chế chính
+
+- Dataset hiện chỉ tập trung vào một số loại quả như apple, banana và orange.
+- Segmentation vẫn có thể sai khi nền phức tạp, ánh sáng không ổn định, quả bị che khuất hoặc có nhiều vật thể trong ảnh.
+- Đặc trưng thủ công dễ giải thích nhưng có thể chưa đủ mạnh cho mọi trường hợp hư hỏng tinh vi.
+- GUI hiện phù hợp cho demo học thuật, chưa phải hệ thống công nghiệp chạy thời gian thực.
+
+### Hướng cải tiến tương lai
+
+- Thu thập thêm dữ liệu trong môi trường thật với camera, ánh sáng và khoảng cách chụp ổn định.
+- Cải thiện segmentation cho nền phức tạp và ảnh có nhiều quả.
+- Bổ sung batch inspection, log kết quả và báo cáo thống kê cho từng lô hàng.
+- Tối ưu tốc độ xử lý để hướng đến băng chuyền.
+- So sánh thêm với deep learning trong nghiên cứu mở rộng, nhưng vẫn giữ pipeline truyền thống làm baseline giải thích được.
+
+### Bài học rút ra
+
+- Một hệ thống thị giác máy tính không chỉ cần mô hình dự đoán mà còn cần tiền xử lý, segmentation, đặc trưng và quy tắc quyết định cuối cùng.
+- Việc tự cài đặt thuật toán bằng NumPy giúp nhóm hiểu rõ bản chất của thresholding, morphology và connected components.
+- Kết quả dự đoán cần đi kèm confidence và kiểm tra bằng chứng ảnh để tránh quyết định quá tự tin trong các trường hợp khó.
+- Tài liệu rõ ràng giúp quá trình bảo vệ dễ thuyết phục hơn vì người nghe có thể theo dõi được toàn bộ logic của hệ thống.
