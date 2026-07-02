@@ -19,6 +19,15 @@ from src.config import (
     MIN_REASONABLE_MASK_RATIO,
 )
 
+LOW_CONFIDENCE_THRESHOLD = 0.60
+LOW_DEFECT_RECHECK_THRESHOLD = 0.01
+LOW_BROWN_DARK_RECHECK_THRESHOLD = 0.05
+LOW_FRUIT_TYPE_CONFIDENCE_REASON = "Fruit type confidence is low; manual recheck is recommended."
+LOW_MODEL_CONFIDENCE_REASON = "Model confidence is low, so a human recheck is safer."
+LOW_DEFECT_ROTTEN_RECHECK_REASON = (
+    "Model predicts rotten, but visible defect evidence is very low; manual recheck is recommended."
+)
+
 
 def _safe_float(features: dict[str, Any], feature_name: str) -> float | None:
     """Convert a feature value to float, or return None."""
@@ -46,6 +55,18 @@ def assess_export_suitability(
     defect_ratio = _safe_float(features, "defect_ratio")
     circularity = _safe_float(features, "circularity")
     mask_area_ratio = _safe_float(features, "mask_area_ratio")
+    fruit_type_confidence = _safe_float(features, "fruit_type_confidence")
+    quality_confidence = _safe_float(features, "quality_confidence")
+    brown_dark_ratio = _safe_float(features, "brown_dark_ratio")
+    low_confidence = any(
+        confidence is not None and confidence < LOW_CONFIDENCE_THRESHOLD
+        for confidence in (fruit_type_confidence, quality_confidence)
+    )
+    rotten_prediction_has_low_visible_evidence = is_rotten_prediction_with_low_visible_evidence(
+        quality=normalized_quality,
+        defect_ratio=defect_ratio,
+        brown_dark_ratio=brown_dark_ratio,
+    )
 
     rule_flags = {
         "is_rotten": normalized_quality == "rotten",
@@ -60,9 +81,16 @@ def assess_export_suitability(
         and circularity < LOW_CIRCULARITY_THRESHOLD,
         "has_small_mask": mask_area_ratio is not None
         and mask_area_ratio < MIN_MASK_AREA_RATIO_THRESHOLD,
+        "rotten_prediction_has_low_visible_evidence": rotten_prediction_has_low_visible_evidence,
     }
 
     if rule_flags["is_rotten"]:
+        if rotten_prediction_has_low_visible_evidence:
+            return {
+                "suitability": "Need Recheck",
+                "reasons": [LOW_DEFECT_ROTTEN_RECHECK_REASON],
+                "rule_flags": rule_flags,
+            }
         return {
             "suitability": "Not Suitable",
             "reasons": ["The fruit is predicted as rotten."],
@@ -97,6 +125,13 @@ def assess_export_suitability(
             "rule_flags": rule_flags,
         }
 
+    if low_confidence:
+        return {
+            "suitability": "Need Recheck",
+            "reasons": [LOW_MODEL_CONFIDENCE_REASON],
+            "rule_flags": rule_flags,
+        }
+
     if rule_flags["has_abnormal_shape"]:
         return {
             "suitability": "Need Recheck",
@@ -117,11 +152,28 @@ def assess_export_suitability(
         "rule_flags": rule_flags,
     }
 
+def is_rotten_prediction_with_low_visible_evidence(
+    quality: str,
+    defect_ratio: float | None,
+    brown_dark_ratio: float | None = None,
+) -> bool:
+    """Return True when a rotten prediction conflicts with visible defect evidence."""
+    if quality.strip().lower() != "rotten" or defect_ratio is None:
+        return False
+
+    brown_dark_is_low = (
+        brown_dark_ratio is None
+        or brown_dark_ratio <= LOW_BROWN_DARK_RECHECK_THRESHOLD
+    )
+    return defect_ratio <= LOW_DEFECT_RECHECK_THRESHOLD and brown_dark_is_low
+
 def decide_market_grade(
     quality: str,
     defect_ratio: float,
     mask_area_ratio: float,
     circularity: float | None = None,
+    brown_dark_ratio: float | None = None,
+    quality_confidence: float | None = None,
 ) -> tuple[str, list[str]]:
     """
     Decide final market grade for fruit sorting.
@@ -135,6 +187,12 @@ def decide_market_grade(
     reasons: list[str] = []
 
     if normalized_quality == "rotten":
+        if is_rotten_prediction_with_low_visible_evidence(
+            quality=normalized_quality,
+            defect_ratio=defect_ratio,
+            brown_dark_ratio=brown_dark_ratio,
+        ):
+            return "Need Recheck", [LOW_DEFECT_ROTTEN_RECHECK_REASON]
         return "Reject", ["Rotten fruit should not be used for export or domestic sale."]
 
     if mask_area_ratio < MIN_REASONABLE_MASK_RATIO:
@@ -171,6 +229,11 @@ def decide_market_grade(
             "Fruit is fresh but has visible defects, so it is better for the domestic market.",
         ]
 
+    if defect_ratio <= HIGH_DEFECT_RATIO_THRESHOLD:
+        return "Need Recheck", [
+            "Fruit is fresh but defect ratio is moderately high, so manual recheck is safer than automatic rejection.",
+        ]
+
     return "Reject", [
-        "Defect ratio is high, so the fruit should be rejected for final sorting.",
+        "Defect ratio is very high, so the fruit should be rejected for final sorting.",
     ]

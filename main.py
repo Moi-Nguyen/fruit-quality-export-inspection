@@ -311,14 +311,26 @@ def run_single_image_prediction(image_path: Path) -> None:
     print(f"- Image: {result['image_path']}")
     print(f"- Fruit type: {result['fruit_type']}")
     print(f"- Quality: {result['quality']}")
+    if result.get("fruit_type_confidence") is not None:
+        print(f"- Fruit type confidence: {float(result['fruit_type_confidence']):.2f}")
+    if result.get("quality_confidence") is not None:
+        print(f"- Quality confidence: {float(result['quality_confidence']):.2f}")
     print(f"- Export suitability: {result['export_suitability']}")
     print(f"- Final market grade: {result['market_grade']}")
+    print(f"- Processing time: {result['processing_time_seconds']:.2f} seconds")
     print("")
     print("Export suitability reasons:")
     export_reasons = result["export_reasons"]
     if isinstance(export_reasons, list):
         for reason_index, reason in enumerate(export_reasons, start=1):
             print(f"- {reason_index}. {reason}")
+    consistency_warnings = result.get("consistency_warnings", [])
+    if isinstance(consistency_warnings, list) and consistency_warnings:
+        print("")
+        print("Consistency warnings:")
+        for warning_index, warning in enumerate(consistency_warnings, start=1):
+            print(f"- {warning_index}. {warning}")
+
     print("")
     print("Market grade reasons:")
     market_grade_reasons = result["market_grade_reasons"]
@@ -424,3 +436,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

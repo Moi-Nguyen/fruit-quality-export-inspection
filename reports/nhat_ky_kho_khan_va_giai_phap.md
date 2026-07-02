@@ -377,3 +377,42 @@ Du an anh xa ket qua ky thuat sang quyet dinh sap xep thuc te bang cac luat don 
 Cach phan hang dua tren luat phu hop voi du an xu ly anh truyen thong vi de giai thich, de bao ve trong bao cao, va khong phu thuoc vao mang hoc sau. Lop quyet dinh nay cung khong lam thay doi cac thuat toan xu ly anh va khong can huan luyen lai mo hinh, nen phu hop voi muc tieu giu he thong don gian, ro rang va co tinh giao duc.
 
 Han che hien tai la cac nguong nhu `defect_ratio` va `mask_area_ratio` van mang tinh kinh nghiem. Ket qua co the bi anh huong boi anh chup qua toi, nen phuc tap, bong do, vat the khac trong anh, hoac phan doan chua chinh xac. Trong tuong lai, cac nguong nay nen duoc hieu chinh bang tap du lieu lon hon va danh gia boi nguoi co kinh nghiem trong phan loai nong san.
+
+## Buoc 13: Toi uu hieu nang va cai thien GUI
+
+Trong qua trinh demo, GUI co the cham vi moi lan phan tich anh phai chay day du pipeline xu ly anh, trich xuat dac trung, nap lai file model `.pkl`, ve hinh va cap nhat giao dien. Neu anh dau vao co kich thuoc lon, cac phep tinh NumPy tren tung pixel cung mat nhieu thoi gian hon.
+
+Giai phap da bo sung gom: cache model de chi nap model mot lan trong moi phien chay, resize anh lon theo ti le truoc khi xu ly bang PIL, tat viec luu figure mac dinh trong GUI, va chay phan tich tren background thread. GUI se hien trang thai `Processing...`, tam thoi vo hieu hoa nut chay phan tich, sau do cap nhat ket qua bang `root.after(...)` de tranh cap nhat Tkinter truc tiep tu worker thread.
+
+Cach lam nay phu hop voi muc tieu prototype bang chuyen don gian: he thong can phan hoi nhanh hon khi xu ly nhieu anh lien tiep, nhung van giu rang buoc cua do an la dung NumPy cho xu ly anh truyen thong, PIL cho doc/resize anh, matplotlib cho hien thi, va scikit-learn cho machine learning.
+
+
+## Ghi chú Step 14 - Kiểm thử ảnh bên ngoài và cải thiện độ bền vững
+
+Khi thử thêm ảnh thật từ bên ngoài tập dữ liệu nội bộ, nhóm nhận thấy hiện tượng domain shift: ảnh Internet có ánh sáng, bóng đổ, nền, độ bóng bề mặt, góc chụp và texture tự nhiên khác với ảnh train/test ban đầu. Một số lỗi quan sát được gồm: táo tươi đôi khi bị dự đoán là rotten, một số ảnh táo bị nhầm thành orange, và defect map quá nhạy với highlight, vùng biên quả, bóng đổ hoặc texture tự nhiên trên vỏ.
+
+Giải pháp được bổ sung vẫn giữ hướng xử lý truyền thống, giải thích được và dùng NumPy:
+
+- Chỉ tính defect candidate trong interior mask sau khi erode mask quả, bỏ qua một dải nhỏ gần contour để giảm lỗi do biên và nền.
+- Suppress specular highlight: pixel rất sáng và ít bão hòa màu không tự động bị xem là defect.
+- Lọc bỏ defect component quá nhỏ bằng connected component NumPy có sẵn trong dự án.
+- Thêm các đặc trưng màu `red_ratio`, `yellow_ratio`, `orange_ratio`, `green_ratio`, `brown_dark_ratio` và saturation để phân biệt táo/cam/chuối tốt hơn.
+- Thêm confidence từ `predict_proba` nếu model scikit-learn hỗ trợ; khi confidence thấp, hệ thống ưu tiên `Need Recheck` thay vì quyết định quá tự tin.
+- Điều chỉnh market grading ít aggressive hơn: quả rotten vẫn `Reject`, nhưng quả fresh có defect trung bình thường chuyển sang `Domestic Grade` hoặc `Need Recheck`; chỉ reject quả fresh khi defect ratio rất cao.
+
+Các thay đổi này không nhằm che giấu giới hạn của mô hình, mà giúp hệ thống an toàn hơn khi gặp ảnh ngoài phân phối và phù hợp hơn với mục tiêu demo/đồ án: quyết định có thể giải thích, có cơ chế kiểm tra lại, và không loại bỏ quả tươi chỉ vì highlight hoặc artifact ở biên.
+
+## Ghi ch? Step 15 - Hieu chinh do tin cay va quy tac Need Recheck an toan
+
+Khi tiep tuc thu nghiem anh ben ngoai, nhom gap hai hien tuong quan trong. Thu nhat, mot anh tao co vet hong bi du doan thanh `orange`, nhung `fruit_type_confidence` chi khoang 44%, cho thay mo hinh khong that su chac chan ve loai trai cay. Thu hai, mot anh tao tuoi bi du doan la `rotten` mac du defect map gan nhu rong, nghia la bang chung xu ly anh truyen thong khong ung ho quyet dinh loai bo qua.
+
+Giai phap Step 15 la lam lop quyet dinh biet den do tin cay. Khi `fruit_type_confidence` thap hon nguong 0.60, he thong khong tu dong doi nhan loai qua, nhung them canh bao `Fruit type confidence is low; manual recheck is recommended.` vao ket qua CLI va GUI de nguoi dung thay ro tinh bat dinh. Khi mo hinh du doan `rotten` nhung `defect_ratio` rat thap, `brown_dark_ratio` thap neu co, va `quality_confidence` thap hoac khong co, he thong khong gan `Reject` qua manh ma chuyen final market grade sang `Need Recheck`.
+
+Cach lam nay phu hop voi muc tieu cua do an: khong che giau loi cua mo hinh, van giu quy tac `rotten` thuong la `Reject`, nhung tranh loai bo qua tuoi chi vi bias cua mo hinh tren anh ngoai phan phoi. Ket qua `Need Recheck` co nghia la anh can duoc nguoi van hanh kiem tra lai hoac can them du lieu huan luyen phu hop hon truoc khi ra quyet dinh cuoi cung.
+
+
+## Buoc 16 - Kiem tra tinh nhat quan giua mo hinh va bang chung anh
+
+Trong qua trinh thu nghiem anh ben ngoai, co mot truong hop anh tao nhin con tuoi nhung mo hinh du doan `quality = rotten` voi do tin cay rat cao, trong khi `defect_ratio = 0.00` va defect map gan nhu trong. Neu chi dua vao do tin cay cua mo hinh, he thong se gan `Reject`, day la quyet dinh khong an toan vi bang chung xu ly anh khong ung ho ket luan trai bi thoi.
+
+Giai phap la bo sung lop kiem tra tinh nhat quan bang chung: neu mo hinh du doan `rotten` nhung `defect_ratio` rat thap va `brown_dark_ratio` cung thap, he thong khong tu dong loai bo ma chuyen sang `Need Recheck`. Ly do hien thi ro rang: "Model predicts rotten, but visible defect evidence is very low; manual recheck is recommended." Cach lam nay giu duoc tinh giai thich cua pipeline, giam rui ro do domain shift cua anh ben ngoai, va van khong che mat cac truong hop thoi hong ro rang khi ti le khuyet tat hoac mau nau/toi cao.

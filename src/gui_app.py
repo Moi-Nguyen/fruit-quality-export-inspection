@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -11,6 +12,7 @@ from matplotlib.figure import Figure
 import numpy as np
 
 from src.config import MODELS_DIR
+from src.export_rules import LOW_CONFIDENCE_THRESHOLD
 from src.predict import IMPORTANT_FEATURES, predict_image
 
 IMAGE_FILE_TYPES = [
@@ -35,20 +37,37 @@ class FruitQualityGUI:
         self.path_var = tk.StringVar(value="No image selected")
         self.fruit_type_var = tk.StringVar(value="-")
         self.quality_var = tk.StringVar(value="-")
+        self.fruit_type_confidence_var = tk.StringVar(value="-")
+        self.quality_confidence_var = tk.StringVar(value="-")
         self.export_var = tk.StringVar(value="-")
         self.market_grade_var = tk.StringVar(value="-")
+        self.status_var = tk.StringVar(value="Ready")
+        self.processing_time_var = tk.StringVar(value="-")
         self.market_grade_label: ttk.Label | None = None
+        self.load_button: ttk.Button | None = None
+        self.run_button: ttk.Button | None = None
 
         self._build_layout()
 
     def _build_layout(self) -> None:
+        header_frame = ttk.Frame(self.root, padding=(10, 10, 10, 0))
+        header_frame.pack(fill=tk.X)
+        ttk.Label(
+            header_frame,
+            text="Fruit Quality Inspection and Export Suitability Assessment",
+            font=("TkDefaultFont", 14, "bold"),
+        ).pack(anchor=tk.W)
+
         top_frame = ttk.Frame(self.root, padding=10)
         top_frame.pack(fill=tk.X)
 
         ttk.Label(top_frame, text="Selected image:").pack(side=tk.LEFT)
         ttk.Label(top_frame, textvariable=self.path_var).pack(side=tk.LEFT, padx=8, fill=tk.X, expand=True)
-        ttk.Button(top_frame, text="Load Image", command=self.select_image).pack(side=tk.LEFT, padx=4)
-        ttk.Button(top_frame, text="Run Analysis", command=self.run_analysis).pack(side=tk.LEFT, padx=4)
+        self.load_button = ttk.Button(top_frame, text="Load Image", command=self.select_image)
+        self.load_button.pack(side=tk.LEFT, padx=4)
+        self.run_button = ttk.Button(top_frame, text="Run Analysis", command=self.run_analysis)
+        self.run_button.pack(side=tk.LEFT, padx=4)
+        ttk.Label(top_frame, textvariable=self.status_var).pack(side=tk.LEFT, padx=(10, 0))
 
         main_frame = ttk.Frame(self.root, padding=(10, 0, 10, 10))
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -69,13 +88,16 @@ class FruitQualityGUI:
         result_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
         self._add_result_row(result_frame, "Fruit type:", self.fruit_type_var, 0)
         self._add_result_row(result_frame, "Quality:", self.quality_var, 1)
-        self._add_result_row(result_frame, "Export suitability:", self.export_var, 2)
+        self._add_result_row(result_frame, "Fruit confidence:", self.fruit_type_confidence_var, 2)
+        self._add_result_row(result_frame, "Quality confidence:", self.quality_confidence_var, 3)
+        self._add_result_row(result_frame, "Export suitability:", self.export_var, 4)
         self.market_grade_label = self._add_result_row(
             result_frame,
             "Final market grade:",
             self.market_grade_var,
-            3,
+            5,
         )
+        self._add_result_row(result_frame, "Processing time:", self.processing_time_var, 6)
 
         bottom_frame = ttk.Frame(self.root, padding=(10, 0, 10, 10))
         bottom_frame.pack(fill=tk.BOTH, expand=True)
@@ -147,36 +169,125 @@ class FruitQualityGUI:
             )
             return
 
+        self.set_processing_state(True)
+        image_path = self.selected_image_path
+
+        worker = threading.Thread(
+            target=self._run_analysis_worker,
+            args=(image_path, fruit_model_path, quality_model_path),
+            daemon=True,
+        )
+        worker.start()
+
+    def _run_analysis_worker(
+        self,
+        image_path: Path,
+        fruit_model_path: Path,
+        quality_model_path: Path,
+    ) -> None:
+        """Run prediction away from Tkinter and schedule UI updates safely."""
         try:
             result = predict_image(
-                image_path=self.selected_image_path,
+                image_path=image_path,
                 fruit_model_path=fruit_model_path,
                 quality_model_path=quality_model_path,
+                save_figure=False,
             )
         except Exception as error:
-            messagebox.showerror("Prediction failed", f"Could not analyze the image:\n\n{error}")
+            self.root.after(0, self._handle_analysis_error, error)
             return
 
+        self.root.after(0, self._handle_analysis_success, result)
+
+    def _handle_analysis_success(self, result: dict[str, object]) -> None:
+        """Update Tkinter widgets after successful background analysis."""
         self.update_result_text(result)
         self.update_feature_table(result)
         self.update_image_display(result)
+        self.set_processing_state(False)
+        self.status_var.set("Complete")
+
+    def _handle_analysis_error(self, error: Exception) -> None:
+        """Restore controls and report a background prediction error."""
+        self.set_processing_state(False)
+        self.status_var.set("Prediction failed")
+        messagebox.showerror("Prediction failed", f"Could not analyze the image:\n\n{error}")
+
+    def set_processing_state(self, is_processing: bool) -> None:
+        """Enable or disable controls during background processing."""
+        state = tk.DISABLED if is_processing else tk.NORMAL
+        if self.run_button is not None:
+            self.run_button.configure(state=state)
+        if self.load_button is not None:
+            self.load_button.configure(state=state)
+        self.status_var.set("Processing..." if is_processing else "Ready")
 
     def update_result_text(self, result: dict[str, object]) -> None:
         """Update prediction labels and explanation text."""
         self.fruit_type_var.set(str(result.get("fruit_type", "-")))
         self.quality_var.set(str(result.get("quality", "-")))
+        if hasattr(self, "fruit_type_confidence_var"):
+            self.fruit_type_confidence_var.set(self._format_confidence(result.get("fruit_type_confidence")))
+        if hasattr(self, "quality_confidence_var"):
+            self.quality_confidence_var.set(self._format_confidence(result.get("quality_confidence")))
         self.export_var.set(str(result.get("export_suitability", "-")))
-
-        reasons = result.get("export_reasons", [])
-        if isinstance(reasons, list) and reasons:
-            explanation = "\n".join(f"- {reason}" for reason in reasons)
+        market_grade = str(result.get("market_grade", "-"))
+        self.market_grade_var.set(market_grade)
+        self.update_market_grade_color(market_grade)
+        processing_time = result.get("processing_time_seconds", None)
+        if isinstance(processing_time, (int, float, np.floating)):
+            self.processing_time_var.set(f"{float(processing_time):.2f} s")
         else:
-            explanation = "No export suitability reasons were returned."
+            self.processing_time_var.set("-")
+
+        explanation_sections = []
+        export_reasons = result.get("export_reasons", [])
+        if isinstance(export_reasons, list) and export_reasons:
+            explanation_sections.append(
+                "Export suitability:\n" + "\n".join(f"- {reason}" for reason in export_reasons)
+            )
+
+        consistency_warnings = result.get("consistency_warnings", [])
+        if isinstance(consistency_warnings, list) and consistency_warnings:
+            explanation_sections.append(
+                "Consistency warning:\n" + "\n".join(f"- {warning}" for warning in consistency_warnings)
+            )
+
+        market_grade_reasons = result.get("market_grade_reasons", [])
+        if isinstance(market_grade_reasons, list) and market_grade_reasons:
+            explanation_sections.append(
+                "Market grade:\n" + "\n".join(f"- {reason}" for reason in market_grade_reasons)
+            )
+
+        if explanation_sections:
+            explanation = "\n\n".join(explanation_sections)
+        else:
+            explanation = "No decision reasons were returned."
 
         self.explanation_text.configure(state=tk.NORMAL)
         self.explanation_text.delete("1.0", tk.END)
         self.explanation_text.insert(tk.END, explanation)
         self.explanation_text.configure(state=tk.DISABLED)
+
+    def _format_confidence(self, value: object) -> str:
+        """Format classifier confidence values for display."""
+        if value is None:
+            return "-"
+
+        try:
+            confidence = float(value)
+        except (TypeError, ValueError):
+            return "-"
+
+        if not np.isfinite(confidence):
+            return "-"
+
+        if 0 <= confidence <= 1:
+            confidence *= 100
+
+        confidence_ratio = confidence / 100.0 if confidence > 1 else confidence
+        low_marker = " (low)" if confidence_ratio < LOW_CONFIDENCE_THRESHOLD else ""
+        return f"{confidence:.1f}%{low_marker}"
 
 
     def update_market_grade_color(self, market_grade: str) -> None:
@@ -188,6 +299,7 @@ class FruitQualityGUI:
             "Export Grade": "green",
             "Domestic Grade": "orange",
             "Reject": "red",
+            "Need Recheck": "goldenrod",
         }
         self.market_grade_label.configure(foreground=grade_colors.get(market_grade, "black"))
 
@@ -230,3 +342,4 @@ def run_gui() -> None:
     root = tk.Tk()
     FruitQualityGUI(root)
     root.mainloop()
+

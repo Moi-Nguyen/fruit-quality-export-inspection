@@ -1,6 +1,10 @@
 """Tests for rule-based export suitability assessment."""
 
-from src.export_rules import assess_export_suitability, decide_market_grade
+from src.export_rules import (
+    LOW_DEFECT_ROTTEN_RECHECK_REASON,
+    assess_export_suitability,
+    decide_market_grade,
+)
 
 
 def good_features() -> dict[str, object]:
@@ -120,13 +124,74 @@ def test_fresh_medium_defect_returns_domestic_grade() -> None:
 def test_rotten_quality_returns_reject_market_grade() -> None:
     market_grade, reasons = decide_market_grade(
         quality="rotten",
-        defect_ratio=0.01,
+        defect_ratio=0.20,
         mask_area_ratio=0.40,
+        quality_confidence=0.90,
     )
 
     assert market_grade == "Reject"
     assert reasons
 
+def test_rotten_low_defect_high_confidence_returns_need_recheck() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="rotten",
+        defect_ratio=0.0,
+        mask_area_ratio=0.40,
+        brown_dark_ratio=0.01,
+        quality_confidence=0.97,
+    )
+
+    assert market_grade == "Need Recheck"
+    assert reasons == [LOW_DEFECT_ROTTEN_RECHECK_REASON]
+
+
+def test_rotten_high_defect_still_returns_reject() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="rotten",
+        defect_ratio=0.24,
+        mask_area_ratio=0.40,
+        brown_dark_ratio=0.01,
+        quality_confidence=0.97,
+    )
+
+    assert market_grade == "Reject"
+    assert reasons
+
+def test_rotten_high_brown_dark_still_returns_reject() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="rotten",
+        defect_ratio=0.0,
+        mask_area_ratio=0.40,
+        brown_dark_ratio=0.20,
+        quality_confidence=0.97,
+    )
+
+    assert market_grade == "Reject"
+    assert reasons
+
+def test_fresh_low_defect_consistency_rule_does_not_apply() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="fresh",
+        defect_ratio=0.0,
+        mask_area_ratio=0.40,
+        brown_dark_ratio=0.01,
+        quality_confidence=0.97,
+    )
+
+    assert market_grade == "Export Grade"
+    assert LOW_DEFECT_ROTTEN_RECHECK_REASON not in reasons
+
+def test_rotten_low_visible_evidence_export_returns_need_recheck() -> None:
+    features = good_features()
+    features["defect_ratio"] = 0.0
+    features["brown_dark_ratio"] = 0.01
+    features["quality_confidence"] = 0.97
+
+    result = assess_export_suitability("apple", "rotten", features)
+
+    assert result["suitability"] == "Need Recheck"
+    assert result["reasons"] == [LOW_DEFECT_ROTTEN_RECHECK_REASON]
+    assert result["rule_flags"]["rotten_prediction_has_low_visible_evidence"] is True
 def test_unreasonable_mask_ratio_returns_domestic_or_reject() -> None:
     market_grade, reasons = decide_market_grade(
         quality="fresh",
@@ -136,3 +201,18 @@ def test_unreasonable_mask_ratio_returns_domestic_or_reject() -> None:
 
     assert market_grade in {"Domestic Grade", "Reject"}
     assert reasons
+
+
+def test_fresh_moderately_high_defect_returns_need_recheck_not_reject() -> None:
+    market_grade, reasons = decide_market_grade(
+        quality="fresh",
+        defect_ratio=0.18,
+        mask_area_ratio=0.40,
+        circularity=0.80,
+    )
+
+    assert market_grade == "Need Recheck"
+    assert reasons
+
+
+

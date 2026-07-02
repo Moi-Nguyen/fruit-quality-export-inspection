@@ -542,3 +542,59 @@ Outputs:
 - `outputs/reports/end_to_end_evaluation_report.txt`
 
 The CSV contains one row per image with the image path, true and predicted fruit type, true and predicted quality, export suitability, final market grade, important handcrafted features, and correctness flags. The text report includes total images tested, fruit type accuracy, quality accuracy, classification reports, confusion matrices, market grade counts, and a list of misclassified images.
+
+## Step 13: Performance Optimization and GUI Polish
+
+Purpose: make the prototype faster and easier to demonstrate while keeping the same traditional image processing and machine learning architecture.
+
+Improvements:
+
+- Model caching: trained `.pkl` model bundles are loaded once per Python process and reused for later predictions, so the GUI no longer reloads both models for every analysis.
+- Optional resizing: very large input images are resized proportionally before processing using PIL, controlled by `MAX_PROCESSING_SIDE` in `src/config.py`. Small images are not resized.
+- Consistent processing outputs: segmentation masks, defect maps, feature extraction, and visualizations use the processed image size, so displayed masks align with the displayed processed image.
+- GUI responsiveness: analysis runs in a background thread, the Run Analysis button is disabled while processing, and Tkinter widgets are updated safely through `root.after(...)`.
+- Figure saving: GUI prediction calls disable figure saving by default to avoid unnecessary disk and matplotlib overhead during demonstrations; CLI prediction can still save prediction figures.
+- Processing time: single-image prediction returns `processing_time_seconds`, the CLI prints it, and the GUI displays it in seconds.
+- Cleaner interface: the GUI uses a clear header, ttk controls, status text, and color-coded final grades: green for `Export Grade`, orange for `Domestic Grade`, red for `Reject`, and golden/orange for `Need Recheck`.
+
+Relation to conveyor-belt prototype:
+
+These optimizations simulate practical constraints of a simple inspection station or conveyor-belt demo. In a real prototype, camera images can be large and repeated predictions must happen quickly. Resizing reduces per-frame processing cost, model caching avoids repeated disk I/O, and background GUI execution keeps the operator interface usable while analysis is running.
+
+
+## Step 14: External Image Robustness Improvements
+
+External Internet images can differ from the internal dataset because of domain shift: camera quality, lighting direction, shadows, white specular highlights, fruit pose, background clutter, compression, and natural fruit texture may all be different from the training images. These differences can make a fresh apple look darker or noisier than expected, or can make apple/orange color boundaries less clear.
+
+This step improves robustness while keeping the system explainable and based on traditional NumPy image processing:
+
+- **Interior defect map:** defect candidates are computed only inside an eroded fruit mask, so a small boundary band near the contour is ignored. This reduces false defects caused by segmentation edges, shadows touching the boundary, and background leakage.
+- **Highlight suppression:** very bright, low-saturation pixels are treated as likely specular highlights instead of automatic defects. This helps fresh glossy apples and oranges avoid false rotten/reject decisions.
+- **Small component filtering:** tiny defect blobs are removed with the project’s NumPy connected-component logic before computing `defect_ratio`.
+- **Color discrimination features:** the feature vector now includes explainable color ratios (`red_ratio`, `yellow_ratio`, `orange_ratio`, `green_ratio`, `brown_dark_ratio`) plus saturation statistics computed with a manual NumPy RGB-to-HSV conversion. These help separate red apples, green fruit, yellow bananas, and oranges.
+- **Prediction confidence:** when a scikit-learn model supports `predict_proba`, prediction results include `fruit_type_confidence` and `quality_confidence`. The CLI prints these values and the GUI shows them in the result panel.
+- **Conservative recheck:** low-confidence fresh predictions are marked as `Need Recheck` instead of making an overconfident export/domestic/reject decision. Clearly rotten predictions still remain `Reject`.
+- **Less aggressive grading:** rotten fruit is still rejected, fresh fruit with low `defect_ratio` can be `Export Grade`, medium defects usually become `Domestic Grade` or `Need Recheck`, and fresh fruit is rejected only when defects are very high.
+
+## Step 15: Confidence-Based Decision Safety
+
+External images can still be outside the training distribution. Step 15 makes the final decision layer more conservative when model confidence and visible defect evidence disagree:
+
+- **Confidence-capable quality model:** model selection now breaks tied scores by preferring classifiers that expose `predict_proba`, with Random Forest preferred when metrics are otherwise tied. SVM is also configured with probability output so `quality_confidence` is available when it is selected.
+- **Low fruit-type confidence warning:** if `fruit_type_confidence` is below `0.60`, the CLI and GUI explanations include: `Fruit type confidence is low; manual recheck is recommended.` The predicted fruit type is still shown, but uncertainty is explicit.
+- **Conservative rotten override:** rotten predictions normally remain `Reject`. However, if the model predicts `rotten` while `defect_ratio` is very low, `brown_dark_ratio` is low or unavailable, and `quality_confidence` is low or unavailable, the final market grade becomes `Need Recheck` instead of automatic `Reject`.
+- **GUI confidence display:** the GUI shows both fruit and quality confidence values, marks low confidence with `(low)`, and includes robustness features such as `defect_ratio`, `brown_dark_ratio`, and key color ratios in the feature table.
+
+This does not claim that uncertain external images are export-quality. It means the system avoids overconfident rejection when the ML label says `rotten` but the explainable defect map is almost empty. In a real inspection workflow, these samples should go to manual review or a better-calibrated dataset before a final business decision.
+
+## Step 16 - Model-evidence consistency check
+
+Purpose: prevent unsafe automatic rejection when the machine-learning quality model predicts `rotten` with high confidence, but the traditional image-processing evidence does not show visible rot.
+
+What changed:
+- The final market grading layer now checks consistency between `quality`, `defect_ratio`, and `brown_dark_ratio`.
+- If `quality == "rotten"`, `defect_ratio <= 0.01`, and `brown_dark_ratio` is also low, the final market grade becomes `Need Recheck` instead of automatic `Reject`.
+- The warning reason is: `Model predicts rotten, but visible defect evidence is very low; manual recheck is recommended.`
+- This rule applies even when `quality_confidence` is high, because model confidence can be unreliable on external or domain-shift images.
+- Obvious rotten cases are not overridden: medium/high `defect_ratio` or high `brown_dark_ratio` still allow `Reject`.
+- The CLI, GUI explanation, and prediction result dictionary now expose this consistency warning.
