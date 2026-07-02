@@ -598,3 +598,42 @@ What changed:
 - This rule applies even when `quality_confidence` is high, because model confidence can be unreliable on external or domain-shift images.
 - Obvious rotten cases are not overridden: medium/high `defect_ratio` or high `brown_dark_ratio` still allow `Reject`.
 - The CLI, GUI explanation, and prediction result dictionary now expose this consistency warning.
+
+## Step 17: GUI Demo Polish
+
+Purpose: improve GUI usability for demonstrations without changing machine-learning, segmentation, feature extraction, or grading logic.
+
+What changed:
+- The Decision Explanation panel now has a vertical scrollbar, so longer export, market-grade, and consistency-warning explanations remain readable.
+- The Important Features table focuses on demo-friendly evidence: shape, mask coverage, RGB color means, defect ratios, color ratios, and model confidence values when available.
+- Missing optional feature keys are skipped safely, so the GUI does not crash when a prediction result lacks a nonessential feature.
+- The GUI status text clearly shows `Processing...` during background analysis, `Complete` after successful analysis, and a prediction-failure message if analysis raises an error.
+
+## Step 18: Professional Tkinter GUI Redesign
+
+The desktop GUI was redesigned into a cleaner dashboard-style layout for university demonstration use while keeping the existing traditional image processing, machine learning prediction, export suitability, market grading, confidence handling, and background-thread behavior unchanged.
+
+Key interface updates:
+
+- Clear header and subtitle: `Fruit Quality Inspection and Export Suitability Assessment` with `Traditional Image Processing + Machine Learning`.
+- Top toolbar with `Load Image`, `Run Analysis`, `Clear`, selected image path, and a status badge for `Ready`, `Processing...`, `Complete`, and `Error`.
+- Balanced image analysis area with three bordered panels for `Original`, `Fruit Mask`, and `Defect Map` using the existing matplotlib rendering.
+- More readable prediction results for fruit type, quality, confidence values, export suitability, final market grade, and processing time.
+- Color-coded final grade labels: green for `Export Grade`, orange for `Domestic Grade`, golden/orange for `Need Recheck`, and red for `Reject`.
+- Scrollable `Important Features` table for available demo features, including shape, color, defect, and confidence values while safely skipping missing optional keys.
+- Scrollable `Decision Explanation` panel with clear `Export suitability:`, `Consistency warning:`, and `Market grade:` sections.
+- `Clear` resets the selected path, image panels, result labels, features, explanation, and status without deleting files.
+
+## Step 19: Simplified Professional GUI Redesign
+
+Step 19 refines the Tkinter GUI into a simplified green/white academic dashboard inspired by a professional inspection interface, while intentionally avoiding sidebars, lab menus, fake heatmaps, footer device text, login text, or unnecessary industrial controls.
+
+Key interface updates:
+
+- Clean dashboard layout with a larger title header and muted subtitle for final-year project presentation.
+- Top control bar with selected image path, `Load Image`, `Run Analysis`, `Clear`, and color-coded status badge.
+- Image analysis card showing `Original`, `Fruit Mask`, and `Defect Map` as three balanced matplotlib panels.
+- Prediction results card with stronger value text, confidence formatting, export suitability, final market grade, and processing time.
+- Important features table with a scrollbar and safe skipping of missing optional feature keys.
+- Decision explanation panel with readable sections for export suitability, consistency warnings, and market grading.
+- Clear/reset button clears GUI state only; it does not delete files, reset trained models, or modify output folders.

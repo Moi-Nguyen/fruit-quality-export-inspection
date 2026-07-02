@@ -416,3 +416,21 @@ Cach lam nay phu hop voi muc tieu cua do an: khong che giau loi cua mo hinh, van
 Trong qua trinh thu nghiem anh ben ngoai, co mot truong hop anh tao nhin con tuoi nhung mo hinh du doan `quality = rotten` voi do tin cay rat cao, trong khi `defect_ratio = 0.00` va defect map gan nhu trong. Neu chi dua vao do tin cay cua mo hinh, he thong se gan `Reject`, day la quyet dinh khong an toan vi bang chung xu ly anh khong ung ho ket luan trai bi thoi.
 
 Giai phap la bo sung lop kiem tra tinh nhat quan bang chung: neu mo hinh du doan `rotten` nhung `defect_ratio` rat thap va `brown_dark_ratio` cung thap, he thong khong tu dong loai bo ma chuyen sang `Need Recheck`. Ly do hien thi ro rang: "Model predicts rotten, but visible defect evidence is very low; manual recheck is recommended." Cach lam nay giu duoc tinh giai thich cua pipeline, giam rui ro do domain shift cua anh ben ngoai, va van khong che mat cac truong hop thoi hong ro rang khi ti le khuyet tat hoac mau nau/toi cao.
+
+## Buoc 17 - Cai thien GUI cho demo va de doc giai thich
+
+Nhom tiep tuc tinh chinh giao dien de phu hop hon khi demo ma khong thay doi logic ML, phan doan, trich xuat dac trung hay quy tac xep hang. Vung `Decision Explanation` duoc them thanh cuon doc de cac ly do dai, bao gom canh bao consistency, khong bi cat noi dung. Bang `Important Features` uu tien hien thi cac dac trung de giai thich nhu dien tich, chu vi, do tron, ti le mat na, mau RGB trung binh, `defect_ratio`, cac ti le mau va confidence cua mo hinh neu co. GUI cung hien trang thai `Processing...`, `Complete`, hoac loi du doan ro rang de nguoi xem demo de theo doi qua trinh phan tich.
+
+## Buoc 18 - Thiet ke lai GUI chuyen nghiep hon cho demo
+
+O Step 18, nhom thiet ke lai giao dien Tkinter theo dang dashboard sach se va de trinh bay hon trong buoi demo dai hoc. Giao dien moi co header ro rang, subtitle ve huong tiep can `Traditional Image Processing + Machine Learning`, hang nut dieu khien gom `Load Image`, `Run Analysis`, `Clear`, cung voi badge trang thai `Ready`, `Processing...`, `Complete`, `Error`.
+
+Ba vung anh `Original`, `Fruit Mask`, va `Defect Map` duoc can chinh trong khung truc quan hon, bang `Important Features` co thanh cuon va chi hien thi dac trung nao co san de tranh loi khi thieu truong tuy chon. Vung `Prediction Results` duoc lam ro hon voi fruit type, quality, confidence, export suitability, final market grade va processing time; market grade duoc to mau de nguoi xem nhanh chong nhan biet `Export Grade`, `Domestic Grade`, `Need Recheck`, hoac `Reject`.
+
+Vung `Decision Explanation` tiep tuc giu thanh cuon doc va chia cac ly do thanh cac muc `Export suitability:`, `Consistency warning:`, va `Market grade:` de canh bao consistency khong bi cat khi noi dung dai. Thay doi nay chi nham cai thien kha nang doc, tinh chuyen nghiep va trai nghiem demo; khong thay doi thuat toan xu ly anh, logic ML, quy tac export suitability hay quy tac xep hang thi truong.
+
+## Buoc 19 - Don gian hoa giao dien dashboard chuyen nghiep
+
+O Step 19, giao dien Tkinter duoc tinh gon theo phong cach dashboard xanh la/trang de tang kha nang doc khi demo va tao cam giac chuyen nghiep hon cho do an dai hoc. Header, thanh dieu khien, the `Image Analysis`, the `Prediction Results`, bang `Important Features`, vung `Decision Explanation`, badge trang thai va nut `Clear` duoc sap xep lai thong thoang, ro rang va nhat quan hon.
+
+Nhom chu dong loai bo cac thanh phan cong nghiep hoac khong can thiet nhu sidebar, menu phong thi nghiem, thong tin CUDA/device/footer, menu ho tro/tai lieu va noi dung gia lap phuc tap. Cach lam nay giu giao dien phu hop voi pham vi de tai dai hoc, tap trung vao anh dau vao, ket qua du doan, dac trung quan trong va giai thich quyet dinh ma khong thay doi pipeline xu ly anh, mo hinh ML hay quy tac danh gia xuat khau.
